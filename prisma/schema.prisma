@@ -1,0 +1,236 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  role      Role     @default(RECEPTIONIST)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  ADMIN
+  OWNER
+  MANAGER
+  RECEPTIONIST
+  HOUSEKEEPING
+  ACCOUNTANT
+}
+
+model RoomType {
+  id          String   @id @default(uuid())
+  name        String
+  capacity    Int
+  bedType     String
+  dailyRate   Float
+  weeklyRate  Float
+  monthlyRate Float
+  rooms       Room[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Room {
+  id                 String             @id @default(uuid())
+  roomNumber         String             @unique
+  floor              Int
+  roomTypeId         String
+  roomType           RoomType           @relation(fields: [roomTypeId], references: [id])
+  status             RoomStatus         @default(AVAILABLE)
+  kitchenEligible    Boolean            @default(false)
+  longStayEligible   Boolean            @default(false)
+  reservations       Reservation[]
+  longStayContracts  LongStayContract[]
+  kitchenUsers       KitchenUser[]
+  housekeepingTasks  HousekeepingTask[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+}
+
+enum RoomStatus {
+  AVAILABLE
+  RESERVED
+  OCCUPIED
+  CHECK_IN_TODAY
+  CHECK_OUT_TODAY
+  CLEANING_REQUIRED
+  UNDER_MAINTENANCE
+  LONG_STAY_OCCUPIED
+}
+
+model Guest {
+  id                String             @id @default(uuid())
+  name              String
+  nationality       String?
+  passportNumber    String?
+  email             String?
+  phoneNumber       String?
+  reservations      Reservation[]
+  longStayContracts LongStayContract[]
+  kitchenUsers      KitchenUser[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+}
+
+model Reservation {
+  id              String            @id @default(uuid())
+  otaConfirmNum   String?
+  guestId         String
+  guest           Guest             @relation(fields: [guestId], references: [id])
+  roomId          String
+  room            Room              @relation(fields: [roomId], references: [id])
+  checkInDate     DateTime
+  checkOutDate    DateTime
+  adults          Int
+  children        Int
+  totalAmount     Float
+  status          ReservationStatus @default(PENDING)
+  source          BookingSource
+  specialRequests String?
+  invoices        Invoice[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+enum ReservationStatus {
+  CONFIRMED
+  PENDING
+  CANCELLED
+  NO_SHOW
+  CHECKED_IN
+  CHECKED_OUT
+}
+
+enum BookingSource {
+  BOOKING_COM
+  AGODA
+  AIRBNB
+  TRIP_COM
+  WEBSITE
+  WHATSAPP
+  WALK_IN
+  PHONE
+  MANUAL
+}
+
+model LongStayContract {
+  id              String         @id @default(uuid())
+  guestId         String
+  guest           Guest          @relation(fields: [guestId], references: [id])
+  roomId          String
+  room            Room           @relation(fields: [roomId], references: [id])
+  startDate       DateTime
+  endDate         DateTime
+  monthlyRent     Float
+  securityDeposit Float
+  status          ContractStatus @default(ACTIVE)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+enum ContractStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+model KitchenUser {
+  id              String   @id @default(uuid())
+  guestId         String
+  guest           Guest    @relation(fields: [guestId], references: [id])
+  roomId          String
+  room            Room     @relation(fields: [roomId], references: [id])
+  accessStartDate DateTime
+  accessEndDate   DateTime
+  depositHeld     Float    @default(0)
+  status          String   @default("ACTIVE") // ACTIVE, EXPIRED, REVOKED
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model KitchenInventory {
+  id        String          @id @default(uuid())
+  itemName  String
+  status    InventoryStatus @default(AVAILABLE)
+  quantity  Int             @default(1)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+enum InventoryStatus {
+  AVAILABLE
+  IN_USE
+  DAMAGED
+  MISSING
+  REPLACEMENT_NEEDED
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  reservationId String
+  reservation   Reservation   @relation(fields: [reservationId], references: [id])
+  subtotal      Float
+  tax           Float
+  discount      Float         @default(0)
+  total         Float
+  status        InvoiceStatus @default(UNPAID)
+  payments      Payment[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+enum InvoiceStatus {
+  PAID
+  UNPAID
+  PARTIAL
+  REFUNDED
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  invoiceId     String
+  invoice       Invoice       @relation(fields: [invoiceId], references: [id])
+  amount        Float
+  method        PaymentMethod
+  paymentDate   DateTime      @default(now())
+  transactionId String?
+}
+
+enum PaymentMethod {
+  CASH_NPR
+  CASH_USD
+  VISA
+  MASTERCARD
+  UNIONPAY
+  ESEWA
+  KHALTI
+  BANK_TRANSFER
+}
+
+model HousekeepingTask {
+  id          String     @id @default(uuid())
+  roomId      String
+  room        Room       @relation(fields: [roomId], references: [id])
+  taskType    String     // CLEANING, DEEP_CLEANING, MAINTENANCE
+  status      TaskStatus @default(PENDING)
+  assignedTo  String?    // User ID
+  notes       String?
+  scheduledFor DateTime
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  INSPECTED
+}
