@@ -4,14 +4,17 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
+  password  String   @default("frontdesk123")
+  pinCode   String?  @default("1234")
   name      String
   role      Role     @default(RECEPTIONIST)
+  shift     String?  @default("Morning")
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -27,7 +30,7 @@ enum Role {
 
 model RoomType {
   id          String   @id @default(uuid())
-  name        String
+  name        String   @unique
   capacity    Int
   bedType     String
   dailyRate   Float
@@ -47,10 +50,14 @@ model Room {
   status             RoomStatus         @default(AVAILABLE)
   kitchenEligible    Boolean            @default(false)
   longStayEligible   Boolean            @default(false)
+  currentGuest       String?
+  cleaningStaff      String?
+  maintenanceNote    String?
   reservations       Reservation[]
   longStayContracts  LongStayContract[]
   kitchenUsers       KitchenUser[]
   housekeepingTasks  HousekeepingTask[]
+  maintenanceTickets MaintenanceTicket[]
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 }
@@ -89,11 +96,12 @@ model Reservation {
   room            Room              @relation(fields: [roomId], references: [id])
   checkInDate     DateTime
   checkOutDate    DateTime
-  adults          Int
-  children        Int
+  adults          Int               @default(1)
+  children        Int               @default(0)
   totalAmount     Float
+  paidAmount      Float             @default(0)
   status          ReservationStatus @default(PENDING)
-  source          BookingSource
+  source          BookingSource     @default(DIRECT)
   specialRequests String?
   invoices        Invoice[]
   createdAt       DateTime          @default(now())
@@ -114,6 +122,7 @@ enum BookingSource {
   AGODA
   AIRBNB
   TRIP_COM
+  DIRECT
   WEBSITE
   WHATSAPP
   WALK_IN
@@ -131,15 +140,21 @@ model LongStayContract {
   endDate         DateTime
   monthlyRent     Float
   securityDeposit Float
+  kitchenAccess   Boolean        @default(true)
+  depositStatus   String         @default("HELD") // HELD, REFUNDED, DEDUCTED
+  rentPaidUntil   DateTime?
   status          ContractStatus @default(ACTIVE)
+  notes           String?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 }
 
 enum ContractStatus {
   ACTIVE
+  EXPIRING
   EXPIRED
   CANCELLED
+  TERMINATED
 }
 
 model KitchenUser {
@@ -148,9 +163,11 @@ model KitchenUser {
   guest           Guest    @relation(fields: [guestId], references: [id])
   roomId          String
   room            Room     @relation(fields: [roomId], references: [id])
+  passType        String   @default("Long Stay") // Long Stay, Short Stay Add-on
   accessStartDate DateTime
   accessEndDate   DateTime
   depositHeld     Float    @default(0)
+  depositStatus   String   @default("HELD") // HELD, REFUNDED, PARTIAL_DEDUCTED
   status          String   @default("ACTIVE") // ACTIVE, EXPIRED, REVOKED
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -173,14 +190,35 @@ enum InventoryStatus {
   REPLACEMENT_NEEDED
 }
 
+model KitchenIncident {
+  id         String   @id @default(uuid())
+  incidentDate DateTime @default(now())
+  type       String
+  guestName  String
+  roomNumber String
+  costNpr    Float
+  status     String   @default("Pending Review") // Deducted from Deposit, Waived, Pending Review
+  note       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
 model Invoice {
   id            String        @id @default(uuid())
-  reservationId String
-  reservation   Reservation   @relation(fields: [reservationId], references: [id])
+  reservationId String?
+  reservation   Reservation?  @relation(fields: [reservationId], references: [id])
+  invoiceDate   DateTime      @default(now())
+  dueDate       DateTime      @default(now())
+  guestName     String?
+  roomNumber    String?
+  items         String?       // Stored JSON string of line items
   subtotal      Float
-  tax           Float
+  tax           Float         // 13% VAT
+  serviceCharge Float         @default(0) // 10% Service Charge
   discount      Float         @default(0)
   total         Float
+  paidAmount    Float         @default(0)
+  paymentMethod String?
   status        InvoiceStatus @default(UNPAID)
   payments      Payment[]
   createdAt     DateTime      @default(now())
@@ -216,16 +254,17 @@ enum PaymentMethod {
 }
 
 model HousekeepingTask {
-  id          String     @id @default(uuid())
-  roomId      String
-  room        Room       @relation(fields: [roomId], references: [id])
-  taskType    String     // CLEANING, DEEP_CLEANING, MAINTENANCE
-  status      TaskStatus @default(PENDING)
-  assignedTo  String?    // User ID
-  notes       String?
-  scheduledFor DateTime
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id           String     @id @default(uuid())
+  roomId       String
+  room         Room       @relation(fields: [roomId], references: [id])
+  taskType     String     // Regular Clean, Deep Clean, Turnover Clean, Linen Change
+  status       TaskStatus @default(PENDING)
+  priority     String     @default("NORMAL") // NORMAL, HIGH, URGENT
+  assignedTo   String?    // Staff Name
+  notes        String?
+  scheduledFor DateTime   @default(now())
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 }
 
 enum TaskStatus {
@@ -233,4 +272,52 @@ enum TaskStatus {
   IN_PROGRESS
   COMPLETED
   INSPECTED
+}
+
+model MaintenanceTicket {
+  id                 String   @id @default(uuid())
+  roomId             String?
+  room               Room?    @relation(fields: [roomId], references: [id])
+  location           String
+  issue              String
+  priority           String   @default("Medium") // Low, Medium, Urgent
+  status             String   @default("Open")   // Open, In Progress, Resolved
+  reportedBy         String
+  assignedTechnician String?
+  reportedAt         DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  detail    String
+  type      String   @default("General") // Booking, LongStay, Billing, Kitchen, Maintenance, Channel
+  channel   String   @default("In-App")  // WhatsApp, Email, In-App, SMS
+  status    String   @default("Delivered") // Delivered, Action Required, Resolved
+  createdAt DateTime @default(now())
+}
+
+model WebhookEndpoint {
+  id          String       @id @default(uuid())
+  name        String       // e.g. "Zapier Booking Sync", "WhatsApp Bot"
+  url         String
+  secret      String?
+  events      String       // Stored JSON array e.g. '["booking.created", "guest.checked_in"]'
+  isActive    Boolean      @default(true)
+  logs        WebhookLog[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model WebhookLog {
+  id          String          @id @default(uuid())
+  endpointId  String
+  endpoint    WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  event       String
+  status      Int             // HTTP status code (e.g. 200, 500)
+  response    String?
+  payload     String          // Stored JSON payload
+  createdAt   DateTime        @default(now())
 }

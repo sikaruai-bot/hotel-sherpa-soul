@@ -15,6 +15,7 @@ import {
   Building
 } from 'lucide-react';
 import { usePms, Invoice } from '@/context/PmsContext';
+import PanInvoicePrint from '@/components/PanInvoicePrint';
 
 export default function BillingPage() {
   const { invoices, recordPayment } = usePms();
@@ -147,102 +148,12 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {/* Official Printable Bill Modal */}
+      {/* Official Printable PAN / Tax Bill with Hotel Logo */}
       {selectedInvoice && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-scale-in text-slate-900">
-            {/* Modal Header */}
-            <div className="flex justify-between items-center border-b pb-3 no-print">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Official Guest Folio</span>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => window.print()}
-                  className="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white px-4 py-1.5 rounded-xl text-xs font-bold transition shadow-sm"
-                >
-                  <Printer size={15} /> Print / Save PDF
-                </button>
-                <button onClick={() => setSelectedInvoice(null)} className="text-slate-400 hover:text-slate-600 p-1">
-                  <X size={20} />
-                </button>
-              </div>
-            </div>
-
-            {/* Printable Invoice Paper Structure */}
-            <div className="border border-slate-200 rounded-2xl p-6 bg-slate-50/40 space-y-4 text-xs font-sans">
-              {/* Hotel Header */}
-              <div className="text-center border-b border-slate-200 pb-4">
-                <h2 className="text-xl font-black tracking-tight text-slate-900">HOTEL SHERPA SOUL</h2>
-                <p className="text-slate-600 mt-0.5">Bhagawati Marg-26, Thamel, Kathmandu, Nepal</p>
-                <p className="text-slate-500 text-[11px]">Tel: +977 1-4700000 | Email: info@hotelsherpasoul.com</p>
-                <p className="text-slate-500 text-[11px] font-mono">PAN / VAT No: 601928374</p>
-              </div>
-
-              {/* Invoice Meta */}
-              <div className="grid grid-cols-2 gap-4 py-2">
-                <div>
-                  <p className="text-slate-500 text-[11px]">Guest Name:</p>
-                  <p className="font-bold text-sm text-slate-900">{selectedInvoice.guestName}</p>
-                  <p className="text-slate-600">Room: {selectedInvoice.roomNumber}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-slate-500 text-[11px]">Invoice #:</p>
-                  <p className="font-bold text-sm font-mono">{selectedInvoice.id}</p>
-                  <p className="text-slate-600">Date: {selectedInvoice.invoiceDate}</p>
-                </div>
-              </div>
-
-              {/* Line Items */}
-              <table className="w-full text-left border-t border-b border-slate-200 py-2">
-                <thead>
-                  <tr className="text-[11px] font-bold text-slate-500 border-b border-slate-200">
-                    <th className="py-2">Description</th>
-                    <th className="py-2 text-center">Qty</th>
-                    <th className="py-2 text-right">Unit Rate</th>
-                    <th className="py-2 text-right">Total (NPR)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {selectedInvoice.items.map((it, idx) => (
-                    <tr key={idx}>
-                      <td className="py-2 font-medium">{it.description}</td>
-                      <td className="py-2 text-center">{it.quantity}</td>
-                      <td className="py-2 text-right">{it.unitPrice.toLocaleString()}</td>
-                      <td className="py-2 text-right font-bold">{it.total.toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Totals */}
-              <div className="space-y-1 text-right text-slate-700">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span>NPR {selectedInvoice.subtotal.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Service Charge (10%):</span>
-                  <span>NPR {selectedInvoice.serviceCharge.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>VAT (13%):</span>
-                  <span>NPR {selectedInvoice.taxAmount.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-base font-extrabold text-slate-900 pt-2 border-t border-slate-300">
-                  <span>Grand Total:</span>
-                  <span>NPR {selectedInvoice.grandTotal.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between font-bold text-emerald-700">
-                  <span>Paid ({selectedInvoice.paymentMethod || 'Settled'}):</span>
-                  <span>NPR {selectedInvoice.paidAmount.toLocaleString()}</span>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-slate-200 text-center text-[10px] text-slate-400">
-                Thank you for staying at Hotel Sherpa Soul! Tashi Delek!
-              </div>
-            </div>
-          </div>
-        </div>
+        <PanInvoicePrint
+          invoice={selectedInvoice}
+          onClose={() => setSelectedInvoice(null)}
+        />
       )}
 
       {/* Record Pay Modal */}

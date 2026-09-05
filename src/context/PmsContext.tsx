@@ -145,6 +145,8 @@ interface PmsContextType {
   invoices: Invoice[];
   notifications: NotificationItem[];
   stopSellActive: boolean;
+  isBackendConnected: boolean;
+  refreshFromBackend: () => Promise<void>;
   addReservation: (reservation: Omit<Reservation, 'id' | 'createdAt'>) => void;
   checkInGuest: (reservationId: string, passport?: string) => void;
   checkOutGuest: (reservationId: string, paymentDetails?: { method: Invoice['paymentMethod']; amount: number }) => void;
@@ -359,6 +361,66 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
   const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
   const [stopSellActive, setStopSellActive] = useState<boolean>(false);
+  const [isBackendConnected, setIsBackendConnected] = useState<boolean>(false);
+
+  const refreshFromBackend = async () => {
+    try {
+      const [roomsRes, resRes, contRes, kitchRes, hkRes, mtRes, invRes, notifRes] = await Promise.allSettled([
+        fetch('/api/rooms').then(r => r.json()),
+        fetch('/api/reservations').then(r => r.json()),
+        fetch('/api/long-stay').then(r => r.json()),
+        fetch('/api/kitchen').then(r => r.json()),
+        fetch('/api/housekeeping').then(r => r.json()),
+        fetch('/api/maintenance').then(r => r.json()),
+        fetch('/api/billing').then(r => r.json()),
+        fetch('/api/notifications').then(r => r.json()),
+      ]);
+
+      let anySuccess = false;
+
+      if (roomsRes.status === 'fulfilled' && roomsRes.value?.success && Array.isArray(roomsRes.value.data) && roomsRes.value.data.length > 0) {
+        setRooms(roomsRes.value.data);
+        anySuccess = true;
+      }
+      if (resRes.status === 'fulfilled' && resRes.value?.success && Array.isArray(resRes.value.data) && resRes.value.data.length > 0) {
+        setReservations(resRes.value.data);
+        anySuccess = true;
+      }
+      if (contRes.status === 'fulfilled' && contRes.value?.success && Array.isArray(contRes.value.data) && contRes.value.data.length > 0) {
+        setContracts(contRes.value.data);
+        anySuccess = true;
+      }
+      if (kitchRes.status === 'fulfilled' && kitchRes.value?.success && kitchRes.value.data) {
+        if (Array.isArray(kitchRes.value.data.users) && kitchRes.value.data.users.length > 0) {
+          setKitchenUsers(kitchRes.value.data.users);
+          anySuccess = true;
+        }
+        if (Array.isArray(kitchRes.value.data.incidents) && kitchRes.value.data.incidents.length > 0) {
+          setKitchenIncidents(kitchRes.value.data.incidents);
+        }
+      }
+      if (hkRes.status === 'fulfilled' && hkRes.value?.success && Array.isArray(hkRes.value.data) && hkRes.value.data.length > 0) {
+        setHousekeepingTasks(hkRes.value.data);
+        anySuccess = true;
+      }
+      if (mtRes.status === 'fulfilled' && mtRes.value?.success && Array.isArray(mtRes.value.data) && mtRes.value.data.length > 0) {
+        setMaintenanceTickets(mtRes.value.data);
+        anySuccess = true;
+      }
+      if (invRes.status === 'fulfilled' && invRes.value?.success && Array.isArray(invRes.value.data) && invRes.value.data.length > 0) {
+        setInvoices(invRes.value.data);
+        anySuccess = true;
+      }
+      if (notifRes.status === 'fulfilled' && notifRes.value?.success && Array.isArray(notifRes.value.data) && notifRes.value.data.length > 0) {
+        setNotifications(notifRes.value.data);
+      }
+
+      setIsBackendConnected(anySuccess);
+    } catch (e) {
+      console.warn('Backend sync error:', e);
+      setIsBackendConnected(false);
+    }
+  };
 
   // Load from LocalStorage if available
   useEffect(() => {
@@ -381,6 +443,8 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.warn('LocalStorage not available or parse error', e);
     }
+    // Attempt backend sync
+    refreshFromBackend();
   }, []);
 
   // Save changes to LocalStorage
@@ -441,6 +505,13 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notifications: updatedNotifs,
       stopSellActive,
     });
+
+    // Background sync to API
+    fetch('/api/reservations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(res),
+    }).catch(err => console.warn('Sync reservation error:', err));
   };
 
   const checkInGuest = (reservationId: string, passport?: string) => {
@@ -495,6 +566,13 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notifications: updatedNotifs,
       stopSellActive,
     });
+
+    // Background sync to API
+    fetch(`/api/reservations/${reservationId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'CHECKED_IN', passportNumber: passport }),
+    }).catch(err => console.warn('Sync check-in error:', err));
   };
 
   const checkOutGuest = (reservationId: string, paymentDetails?: { method: Invoice['paymentMethod']; amount: number }) => {
@@ -549,6 +627,13 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notifications,
       stopSellActive,
     });
+
+    // Background sync to API
+    fetch(`/api/reservations/${reservationId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'CHECKED_OUT' }),
+    }).catch(err => console.warn('Sync check-out error:', err));
   };
 
   const updateRoomStatus = (roomNumber: string, status: Room['status'], note?: string) => {
@@ -577,6 +662,13 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notifications,
       stopSellActive,
     });
+
+    // Background sync to API
+    fetch(`/api/rooms/${roomNumber}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, maintenanceNote: note }),
+    }).catch(err => console.warn('Sync room status error:', err));
   };
 
   const addLongStayContract = (contract: Omit<LongStayContract, 'id'>) => {
@@ -623,6 +715,13 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notifications,
       stopSellActive,
     });
+
+    // Background sync to API
+    fetch('/api/long-stay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(contract),
+    }).catch(err => console.warn('Sync long stay contract error:', err));
   };
 
   const addKitchenPass = (pass: Omit<KitchenUser, 'id'>) => {
@@ -643,6 +742,13 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notifications,
       stopSellActive,
     });
+
+    // Background sync to API
+    fetch('/api/kitchen', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pass),
+    }).catch(err => console.warn('Sync kitchen pass error:', err));
   };
 
   const addKitchenIncident = (inc: Omit<KitchenIncident, 'id' | 'date'>) => {
@@ -667,6 +773,13 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notifications,
       stopSellActive,
     });
+
+    // Background sync to API
+    fetch('/api/kitchen', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...inc, action: 'incident' }),
+    }).catch(err => console.warn('Sync kitchen incident error:', err));
   };
 
   const updateGasLevel = (level: number) => {
@@ -706,6 +819,13 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       setRooms(updatedRooms);
     }
+
+    // Background sync to API
+    fetch(`/api/housekeeping/${taskId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    }).catch(err => console.warn('Sync housekeeping status error:', err));
   };
 
   const addMaintenanceTicket = (ticket: Omit<MaintenanceTicket, 'id' | 'reportedAt'>) => {
@@ -729,6 +849,13 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       setRooms(updatedRooms);
     }
+
+    // Background sync to API
+    fetch('/api/maintenance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ticket),
+    }).catch(err => console.warn('Sync maintenance ticket error:', err));
   };
 
   const resolveMaintenanceTicket = (ticketId: string) => {
@@ -752,6 +879,13 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       setRooms(updatedRooms);
     }
+
+    // Background sync to API
+    fetch(`/api/maintenance/${ticketId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'Resolved' }),
+    }).catch(err => console.warn('Sync resolve maintenance error:', err));
   };
 
   const createInvoice = (inv: Omit<Invoice, 'id'>): Invoice => {
@@ -772,6 +906,14 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notifications,
       stopSellActive,
     });
+
+    // Background sync to API
+    fetch('/api/billing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(inv),
+    }).catch(err => console.warn('Sync invoice error:', err));
+
     return newInvoice;
   };
 
@@ -789,6 +931,13 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return inv;
     });
     setInvoices(updated);
+
+    // Background sync to API
+    fetch(`/api/billing/${invoiceId}/payment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount, method }),
+    }).catch(err => console.warn('Sync payment error:', err));
   };
 
   const toggleStopSell = () => {
@@ -820,6 +969,8 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         invoices,
         notifications,
         stopSellActive,
+        isBackendConnected,
+        refreshFromBackend,
         addReservation,
         checkInGuest,
         checkOutGuest,
