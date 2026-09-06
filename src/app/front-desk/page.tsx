@@ -14,9 +14,11 @@ import {
   CreditCard, 
   Printer, 
   X,
-  UserCheck
+  UserCheck,
+  QrCode
 } from 'lucide-react';
 import { usePms, Reservation } from '@/context/PmsContext';
+import SelfCheckinQrModal from '@/components/SelfCheckinQrModal';
 
 export default function FrontDeskPage() {
   const { reservations, checkInGuest, checkOutGuest, createInvoice } = usePms();
@@ -32,6 +34,7 @@ export default function FrontDeskPage() {
   const [luggageNotes, setLuggageNotes] = useState<string[]>(['Sarah Connor (Room 202) - 2 Backpacks stored in reception closet.']);
   const [newLuggageText, setNewLuggageText] = useState('');
   const [showLuggageModal, setShowLuggageModal] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
 
   // Filter Arrivals & Departures
   const arrivals = reservations.filter(r => r.status === 'CONFIRMED' || r.status === 'CHECKED_IN');
@@ -87,7 +90,13 @@ export default function FrontDeskPage() {
           </h1>
           <p className="text-xs text-slate-500">Fast check-in, passport police compliance, checkout balance settlement & luggage</p>
         </div>
-        <div className="flex gap-2.5">
+        <div className="flex flex-wrap gap-2.5">
+          <button 
+            onClick={() => setShowQrModal(true)}
+            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 px-4 py-2 rounded-xl text-xs font-black transition shadow-sm"
+          >
+            <QrCode size={16} /> Print Self Check-In QR
+          </button>
           <button 
             onClick={() => setShowLuggageModal(true)}
             className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition shadow-sm"
@@ -410,6 +419,9 @@ export default function FrontDeskPage() {
           </div>
         </div>
       )}
+
+      {/* Self Check-In QR Modal */}
+      <SelfCheckinQrModal isOpen={showQrModal} onClose={() => setShowQrModal(false)} />
 
     </div>
   );

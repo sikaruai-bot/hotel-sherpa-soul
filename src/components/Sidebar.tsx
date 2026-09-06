@@ -15,7 +15,8 @@ import {
   Globe,
   Bell,
   BrainCircuit,
-  Zap
+  Zap,
+  QrCode
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -40,6 +41,11 @@ export default function Sidebar() {
         <Link href="/front-desk" className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
           <CalendarDays size={18} />
           <span className="text-sm font-medium">Front Desk & Check-in</span>
+        </Link>
+
+        <Link href="/self-checkin" target="_blank" className="flex items-center gap-3 px-3 py-2 rounded-lg text-amber-300 hover:bg-slate-800 hover:text-white transition-colors">
+          <QrCode size={18} />
+          <span className="text-sm font-medium">Guest QR Self Check-In</span>
         </Link>
 
         <Link href="/reservations" className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
