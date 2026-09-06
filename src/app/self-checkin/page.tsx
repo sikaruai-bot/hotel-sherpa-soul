@@ -11,12 +11,16 @@ import {
   ShieldCheck, 
   MapPin, 
   Calendar, 
-  User, 
+  CreditCard,
+  QrCode,
   AlertTriangle,
   Copy,
   ExternalLink,
   Lock,
-  Compass
+  Compass,
+  ArrowRight,
+  Receipt,
+  Check
 } from 'lucide-react';
 
 interface BookingMatch {
@@ -35,6 +39,7 @@ interface BookingMatch {
   totalAmount: number;
   paidAmount: number;
   balanceDue: number;
+  requiresPayment: boolean;
   alreadyCheckedIn: boolean;
 }
 
@@ -46,6 +51,9 @@ interface CheckInResult {
   bedType: string;
   checkInDate: string;
   checkOutDate: string;
+  paidAmount: number;
+  totalAmount: number;
+  paymentStatus: string;
   wifiNetwork: string;
   wifiPassword: string;
   kitchenEligible: boolean;
@@ -64,15 +72,22 @@ export default function SelfCheckInPage() {
 
   // Selected reservation for completing check-in
   const [selectedBooking, setSelectedBooking] = useState<BookingMatch | null>(null);
+  
+  // Guest KYC details
   const [passportNumber, setPassportNumber] = useState('');
   const [nationality, setNationality] = useState('International');
   const [guestPhone, setGuestPhone] = useState('');
   const [agreeRules, setAgreeRules] = useState(true);
+
+  // Payment details (Mandatory if balanceDue > 0)
+  const [paymentMethod, setPaymentMethod] = useState<'eSewa / Fonepay QR' | 'Khalti QR' | 'Bank Transfer' | 'Cash NPR (Keybox Drop)' | 'Prepaid Online (OTA)'>('eSewa / Fonepay QR');
+  const [transactionId, setTransactionId] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   // Completed result
   const [checkInDone, setCheckInDone] = useState<CheckInResult | null>(null);
   const [copiedWifi, setCopiedWifi] = useState(false);
+  const [copiedEsewa, setCopiedEsewa] = useState(false);
 
   // 1. Search booking
   const handleSearch = async (e: React.FormEvent) => {
@@ -107,13 +122,19 @@ export default function SelfCheckInPage() {
     }
   };
 
-  // 2. Submit check-in
+  // 2. Submit check-in with payment verification
   const handleSubmitCheckIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedBooking) return;
 
     if (!passportNumber.trim() || passportNumber.trim().length < 3) {
-      setErrorMsg('Please enter a valid Passport or National ID number.');
+      setErrorMsg('Please enter your Passport or National ID number.');
+      return;
+    }
+
+    // Strict payment check
+    if (selectedBooking.balanceDue > 0 && (!transactionId.trim() || transactionId.trim().length < 3)) {
+      setErrorMsg(`Payment required! Please scan the QR code to pay NPR ${selectedBooking.balanceDue.toLocaleString()} and enter your Transaction / Reference ID.`);
       return;
     }
 
@@ -129,6 +150,9 @@ export default function SelfCheckInPage() {
           passportNumber: passportNumber.trim(),
           nationality: nationality.trim(),
           phoneNumber: guestPhone.trim(),
+          paymentMethod: selectedBooking.balanceDue > 0 ? paymentMethod : 'Prepaid Online (OTA)',
+          transactionId: selectedBooking.balanceDue > 0 ? transactionId.trim() : 'PREPAID_ONLINE',
+          paidAmountNow: selectedBooking.balanceDue,
         }),
       });
 
@@ -139,7 +163,7 @@ export default function SelfCheckInPage() {
 
       setCheckInDone(data.data);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Something went wrong during check-in.');
+      setErrorMsg(err.message || 'Something went wrong during payment verification & check-in.');
     } finally {
       setSubmitting(false);
     }
@@ -152,6 +176,15 @@ export default function SelfCheckInPage() {
     setTimeout(() => setCopiedWifi(false), 2000);
   };
 
+  const handleCopyEsewa = () => {
+    navigator.clipboard.writeText('9851068219');
+    setCopiedEsewa(true);
+    setTimeout(() => setCopiedEsewa(false), 2000);
+  };
+
+  // Fonepay / eSewa Payment QR image for Hotel Sherpa Soul
+  const paymentQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent('Hotel Sherpa Soul | eSewa/Fonepay: 9851068219 | Thamel, Kathmandu')}&color=0f172a&bgcolor=ffffff&margin=1`;
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-amber-500 selection:text-black">
       {/* Top Header */}
@@ -163,7 +196,7 @@ export default function SelfCheckInPage() {
             </div>
             <div>
               <h1 className="font-bold text-sm tracking-tight text-white leading-tight">Hotel Sherpa Soul</h1>
-              <p className="text-[11px] text-amber-400 font-medium">Guest Self Check-In Portal</p>
+              <p className="text-[11px] text-amber-400 font-medium">Self Check-In & Payment Portal</p>
             </div>
           </div>
           <span className="text-[10px] bg-emerald-950/80 border border-emerald-800 text-emerald-300 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -183,17 +216,21 @@ export default function SelfCheckInPage() {
               <div className="w-14 h-14 bg-emerald-500 text-slate-950 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-emerald-500/30">
                 <CheckCircle2 size={32} strokeWidth={2.5} />
               </div>
-              <h2 className="text-xl font-black text-white tracking-tight">Check-In Successful!</h2>
+              <h2 className="text-xl font-black text-white tracking-tight">Payment & Check-In Complete!</h2>
               <p className="text-xs text-emerald-200 mt-1">
                 Tashi Delek & Welcome, <span className="font-bold text-white">{checkInDone.guestName}</span>!
               </p>
+              <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-300 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-800">
+                <Receipt size={12} />
+                <span>NPR {checkInDone.totalAmount.toLocaleString()} Settled & Paid</span>
+              </div>
             </div>
 
             {/* Room Key & Access Card */}
             <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-amber-500/40 rounded-3xl p-5 shadow-xl relative overflow-hidden">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">Assigned Room</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">Your Assigned Room</span>
                   <div className="text-4xl font-black text-white mt-0.5 tracking-tight flex items-baseline gap-2">
                     Room {checkInDone.roomNumber}
                     <span className="text-sm font-semibold text-slate-400">(Floor {checkInDone.floor})</span>
@@ -251,7 +288,7 @@ export default function SelfCheckInPage() {
                     <span>Shared Kitchen Access Included</span>
                   </div>
                   <p className="text-slate-400 text-[11px]">
-                    Open: <span className="text-white font-medium">{checkInDone.kitchenHours}</span>. Feel free to use the refrigerator, stove, and hot water kettle. Please label your items!
+                    Open: <span className="text-white font-medium">{checkInDone.kitchenHours}</span>. Feel free to use the refrigerator, stove, and hot water kettle.
                   </p>
                 </div>
               )}
@@ -261,14 +298,14 @@ export default function SelfCheckInPage() {
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 space-y-2.5">
               <h3 className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
                 <Compass size={14} className="text-amber-400" />
-                <span>Need Assistance or Key Help?</span>
+                <span>Need Assistance or Key Box Help?</span>
               </h3>
               <p className="text-[11px] text-slate-400">
-                Front desk staff or Manager are available on WhatsApp/Call for late check-in help.
+                Front desk staff or Manager are available on WhatsApp/Call for check-in support.
               </p>
               <div className="grid grid-cols-2 gap-2 pt-1">
                 <a
-                  href="https://wa.me/9779851068219?text=Hello%20Hotel%20Sherpa%20Soul,%20I%20just%20self%20checked%20in."
+                  href="https://wa.me/9779851068219?text=Hello%20Hotel%20Sherpa%20Soul,%20I%20just%20self%20checked%20in%20and%20paid."
                   target="_blank"
                   rel="noopener noreferrer"
                   className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition shadow-sm"
@@ -293,6 +330,7 @@ export default function SelfCheckInPage() {
                 setSelectedBooking(null);
                 setMatches(null);
                 setSearchQuery('');
+                setTransactionId('');
               }}
               className="w-full text-center text-xs text-slate-500 hover:text-slate-300 py-2 transition"
             >
@@ -300,13 +338,15 @@ export default function SelfCheckInPage() {
             </button>
           </div>
         ) : selectedBooking ? (
-          /* STEP 2: VERIFY DETAILS & ENTER ID */
+          /* STEP 2: PAYMENT & VERIFICATION */
           <div className="space-y-4 animate-in fade-in slide-in-from-right-3 duration-200">
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4 shadow-xl">
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                 <div>
-                  <span className="text-[10px] font-extrabold uppercase text-amber-400 tracking-wider">Step 2 of 2</span>
-                  <h2 className="text-base font-bold text-white">Guest Identification</h2>
+                  <span className="text-[10px] font-extrabold uppercase text-amber-400 tracking-wider">
+                    {selectedBooking.balanceDue > 0 ? 'Step 2: Payment & Verification' : 'Step 2: ID Verification'}
+                  </span>
+                  <h2 className="text-base font-bold text-white">Complete Check-In</h2>
                 </div>
                 <button
                   type="button"
@@ -339,8 +379,113 @@ export default function SelfCheckInPage() {
                 </div>
               </div>
 
+              {/* 🔒 PAYMENT SECTION (If balance due) */}
+              {selectedBooking.balanceDue > 0 ? (
+                <div className="bg-amber-950/30 border-2 border-amber-500/40 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs font-black text-amber-300">
+                      <CreditCard size={15} />
+                      <span>Payment Required to Unlock Room Key</span>
+                    </div>
+                    <span className="text-[10px] bg-rose-500/20 text-rose-300 font-bold px-2 py-0.5 rounded-full border border-rose-500/30">
+                      Unpaid
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-950/90 p-3 rounded-xl border border-amber-500/20 flex justify-between items-center">
+                    <div>
+                      <p className="text-[10px] uppercase font-bold text-slate-400">Outstanding Balance</p>
+                      <p className="text-xl font-black text-amber-400">
+                        NPR {selectedBooking.balanceDue.toLocaleString()}
+                      </p>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      (Total: NPR {selectedBooking.totalAmount.toLocaleString()})
+                    </span>
+                  </div>
+
+                  {/* QR Scan to Pay box */}
+                  <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-center space-y-2.5">
+                    <p className="text-xs font-bold text-slate-200 flex items-center justify-center gap-1">
+                      <QrCode size={14} className="text-amber-400" />
+                      Scan to Pay via Fonepay / eSewa / Mobile Banking:
+                    </p>
+
+                    <div className="bg-white p-2.5 rounded-xl inline-block shadow-md">
+                      <img 
+                        src={paymentQrUrl} 
+                        alt="Payment QR Code" 
+                        className="w-36 h-36 object-contain rounded-lg mx-auto"
+                      />
+                    </div>
+
+                    <div className="text-[11px] text-slate-300 space-y-1">
+                      <p className="font-bold text-white">Hotel Sherpa Soul Pvt. Ltd.</p>
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="text-slate-400">eSewa / Fonepay ID:</span>
+                        <span className="font-mono font-bold text-amber-300">9851068219</span>
+                        <button
+                          type="button"
+                          onClick={handleCopyEsewa}
+                          className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded font-bold transition"
+                        >
+                          {copiedEsewa ? 'Copied!' : 'Copy'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Payment Method & Transaction Reference */}
+                  <div className="space-y-2.5 pt-1">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">Select Payment Method Used:</label>
+                      <select
+                        value={paymentMethod}
+                        onChange={(e: any) => setPaymentMethod(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                      >
+                        <option value="eSewa / Fonepay QR">eSewa / Fonepay Mobile Banking QR</option>
+                        <option value="Khalti QR">Khalti Digital Wallet</option>
+                        <option value="Bank Transfer">Direct Bank Transfer</option>
+                        <option value="Cash NPR (Keybox Drop)">Cash NPR (Dropped in Keybox Envelope)</option>
+                        <option value="Prepaid Online (OTA)">Prepaid Online to Booking.com / Agoda</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-amber-300 mb-1 flex items-center gap-1">
+                        <Receipt size={13} />
+                        Transaction ID / Payment Reference Number *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. 12894102 or eSewa Ref ID / Note"
+                        value={transactionId}
+                        onChange={(e) => setTransactionId(e.target.value)}
+                        className="w-full bg-slate-950 border-2 border-amber-500/50 rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400 font-mono font-bold"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        Enter the transaction code from your banking/wallet receipt. Room key unlocks once entered.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* PREPAID BADGE */
+                <div className="bg-emerald-950/40 border border-emerald-500/40 rounded-2xl p-3.5 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                    <Check size={18} strokeWidth={2.5} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-emerald-300">100% Paid & Confirmed</p>
+                    <p className="text-[11px] text-slate-300">No payment due. Please enter your Passport ID below to receive your room key.</p>
+                  </div>
+                </div>
+              )}
+
               {/* Form */}
-              <form onSubmit={handleSubmitCheckIn} className="space-y-3.5">
+              <form onSubmit={handleSubmitCheckIn} className="space-y-3.5 pt-1">
                 <div>
                   <label className="block text-xs font-bold text-slate-300 mb-1 flex items-center gap-1.5">
                     <ShieldCheck size={14} className="text-amber-400" />
@@ -362,7 +507,7 @@ export default function SelfCheckInPage() {
                     <label className="block text-xs font-bold text-slate-300 mb-1">Nationality</label>
                     <input
                       type="text"
-                      placeholder="e.g. Nepali, French, etc."
+                      placeholder="e.g. Nepali, American"
                       value={nationality}
                       onChange={(e) => setNationality(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 transition"
@@ -382,9 +527,8 @@ export default function SelfCheckInPage() {
 
                 {/* Hotel Quiet Policy */}
                 <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
-                  <p className="font-bold text-slate-200">Hotel Sherpa Soul Quiet Policy:</p>
-                  <p>• Quiet hours: 10:00 PM – 07:00 AM (No Restaurant, No Noise, Sleep Well).</p>
-                  <p>• Non-smoking in indoor rooms.</p>
+                  <p className="font-bold text-slate-200">Hotel Sherpa Soul Policy:</p>
+                  <p>• Quiet hours: 10:00 PM – 07:00 AM (Sleep Well policy).</p>
                   <label className="flex items-center gap-2 pt-1 text-slate-300 cursor-pointer font-medium">
                     <input
                       type="checkbox"
@@ -392,7 +536,7 @@ export default function SelfCheckInPage() {
                       onChange={(e) => setAgreeRules(e.target.checked)}
                       className="rounded accent-amber-500"
                     />
-                    <span>I agree to the hotel rules & quiet hours.</span>
+                    <span>I agree to hotel quiet hours & regulations.</span>
                   </label>
                 </div>
 
@@ -405,11 +549,25 @@ export default function SelfCheckInPage() {
 
                 <button
                   type="submit"
-                  disabled={submitting || !agreeRules}
-                  className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-3 rounded-xl text-sm transition shadow-lg shadow-amber-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                  disabled={submitting || !agreeRules || (selectedBooking.balanceDue > 0 && !transactionId.trim())}
+                  className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-3.5 rounded-xl text-sm transition shadow-lg shadow-amber-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {submitting ? 'Verifying & Checking In...' : 'Confirm & Open Room Key →'}
+                  {submitting ? (
+                    'Verifying Payment & Checking In...'
+                  ) : selectedBooking.balanceDue > 0 ? (
+                    <>
+                      <Lock size={15} />
+                      Verify Payment & Unlock Room Key →
+                    </>
+                  ) : (
+                    'Confirm & Open Room Key →'
+                  )}
                 </button>
+                {selectedBooking.balanceDue > 0 && !transactionId.trim() && (
+                  <p className="text-[11px] text-amber-400/90 text-center font-medium">
+                    ⚠️ Enter Transaction ID above to activate check-in button.
+                  </p>
+                )}
               </form>
             </div>
           </div>
@@ -421,7 +579,7 @@ export default function SelfCheckInPage() {
               <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">Self-Service Desk</span>
               <h2 className="text-2xl font-black text-white tracking-tight">Express Self Check-In</h2>
               <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                Front desk away? Check in directly, access your room number, WiFi, and key instructions in 30 seconds.
+                Front desk away? Settle payment, check in directly, and access your room number, key, and WiFi in 30 seconds.
               </p>
             </div>
 
@@ -442,7 +600,7 @@ export default function SelfCheckInPage() {
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400 transition"
                   />
                   <p className="text-[10px] text-slate-500 mt-1">
-                    You can find this on your Booking.com, Agoda, Airbnb confirmation email, or WhatsApp message.
+                    You can find this on your Booking.com, Agoda confirmation, or WhatsApp message.
                   </p>
                 </div>
 
@@ -477,7 +635,14 @@ export default function SelfCheckInPage() {
                     >
                       <div>
                         <p className="font-bold text-xs text-white">{b.guestName}</p>
-                        <p className="text-[10px] text-slate-400">{b.roomType} • Room {b.roomNumber}</p>
+                        <p className="text-[10px] text-slate-400">
+                          {b.roomType} • Room {b.roomNumber}
+                          {b.balanceDue > 0 ? (
+                            <span className="text-amber-400 ml-1.5 font-bold">• Due: NPR {b.balanceDue.toLocaleString()}</span>
+                          ) : (
+                            <span className="text-emerald-400 ml-1.5 font-bold">• Paid</span>
+                          )}
+                        </p>
                       </div>
                       <span className="text-amber-400 text-xs font-bold">Select →</span>
                     </div>
