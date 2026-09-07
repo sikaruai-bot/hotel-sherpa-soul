@@ -52,7 +52,7 @@ function getTransporter() {
 
 const DEFAULT_FROM = process.env.SMTP_FROM || 'Hotel Sherpa Soul <info@hotelsherpasoul.com>';
 const HOTEL_OFFICIAL = process.env.HOTEL_OFFICIAL_EMAIL || 'info@hotelsherpasoul.com';
-const HOTEL_ADMIN_CC = process.env.HOTEL_ADMIN_CC || 'mingmasaino@gmail.com';
+const HOTEL_ADMIN_CC = process.env.HOTEL_ADMIN_CC || 'mingmagee@gmail.com';
 
 function formatDate(date: string | Date): string {
   const d = new Date(date);
