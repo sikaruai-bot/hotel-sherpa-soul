@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Search, Plus, Calendar, DollarSign, Check, X, Printer, User, Filter, AlertCircle } from 'lucide-react';
+import { Search, Plus, Calendar, DollarSign, Check, X, Printer, User, Filter, AlertCircle, FileText, Eye, Download } from 'lucide-react';
 
 interface BookingItem {
   id: string;
@@ -15,6 +15,9 @@ interface BookingItem {
   guestPhone: string;
   guestWhatsApp: string;
   guestCountry: string;
+  guestIdType?: string;
+  guestIdNumber?: string;
+  guestIdDocumentUrl?: string;
   specialRequests: string;
   categoryId: string;
   categoryName: string;
@@ -56,6 +59,12 @@ export default function AdminBookingsClient({ initialBookings, physicalRooms, ca
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<BookingItem | null>(null);
+  const [viewingIdDoc, setViewingIdDoc] = useState<{
+    name: string;
+    url: string;
+    idType?: string;
+    idNumber?: string;
+  } | null>(null);
 
   // New Booking form state
   const [newBooking, setNewBooking] = useState({
@@ -183,6 +192,27 @@ export default function AdminBookingsClient({ initialBookings, physicalRooms, ca
                   <td className="py-3 px-4">
                     <span className="font-bold text-slate-900 block">{b.guestName}</span>
                     <span className="text-[11px] text-slate-400 block">{b.guestPhone}</span>
+                    {b.guestCountry && (
+                      <span className="text-[10px] text-slate-500 font-medium block">{b.guestCountry}</span>
+                    )}
+                    {b.guestIdDocumentUrl ? (
+                      <button
+                        onClick={() => setViewingIdDoc({
+                          name: b.guestName,
+                          url: b.guestIdDocumentUrl!,
+                          idType: b.guestIdType,
+                          idNumber: b.guestIdNumber
+                        })}
+                        className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 hover:text-amber-950 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded border border-amber-300 mt-1 transition-colors"
+                      >
+                        <FileText className="w-3 h-3 text-amber-700" />
+                        <span>View ID Document</span>
+                      </button>
+                    ) : b.guestIdType || b.guestIdNumber ? (
+                      <span className="inline-block text-[10px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded mt-1">
+                        {b.guestIdType ? `${b.guestIdType}: ` : 'ID: '}{b.guestIdNumber}
+                      </span>
+                    ) : null}
                   </td>
                   <td className="py-3 px-4">
                     <span className="font-bold text-slate-800 block">Room #{b.physicalRoomNumber}</span>
@@ -249,7 +279,68 @@ export default function AdminBookingsClient({ initialBookings, physicalRooms, ca
               <div>
                 <strong className="text-slate-900 block text-sm">{selectedBooking.guestName}</strong>
                 <span>{selectedBooking.guestEmail} • {selectedBooking.guestPhone}</span>
+                {selectedBooking.guestCountry && (
+                  <span className="block text-[11px] text-slate-500 mt-0.5">
+                    Nationality: <strong className="text-slate-700">{selectedBooking.guestCountry}</strong>
+                  </span>
+                )}
               </div>
+
+              {/* Guest ID Verification Card */}
+              <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-amber-600" /> Guest ID & Verification
+                  </span>
+                  {selectedBooking.guestIdDocumentUrl ? (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      ✓ Document Attached
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500">
+                      No Document Uploaded
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">ID Document Type</span>
+                    <strong className="text-slate-800">{selectedBooking.guestIdType || 'Not specified'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">ID / Passport Number</span>
+                    <strong className="text-slate-800 font-mono">{selectedBooking.guestIdNumber || 'Not specified'}</strong>
+                  </div>
+                </div>
+                {selectedBooking.guestIdDocumentUrl && (
+                  <div className="pt-2 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setViewingIdDoc({
+                        name: selectedBooking.guestName,
+                        url: selectedBooking.guestIdDocumentUrl!,
+                        idType: selectedBooking.guestIdType,
+                        idNumber: selectedBooking.guestIdNumber
+                      })}
+                      className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>View Uploaded ID</span>
+                    </button>
+                    <a
+                      href={selectedBooking.guestIdDocumentUrl}
+                      download={`Guest_ID_${selectedBooking.guestName.replace(/\s+/g, '_')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs flex items-center gap-1.5"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download</span>
+                    </a>
+                  </div>
+                )}
+              </div>
+
               <div className="p-3 bg-slate-50 rounded-xl space-y-1">
                 <div className="flex justify-between">
                   <span>Room:</span>
@@ -459,6 +550,67 @@ export default function AdminBookingsClient({ initialBookings, physicalRooms, ca
               Save Reservation
             </button>
           </form>
+        </div>
+      )}
+
+      {/* Guest ID Document Preview Modal */}
+      {viewingIdDoc && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <span className="text-[10px] font-bold uppercase text-amber-600">Guest Identity Document</span>
+                <h3 className="text-lg font-bold text-slate-900">{viewingIdDoc.name}</h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  {viewingIdDoc.idType || 'ID Document'} {viewingIdDoc.idNumber ? `• ${viewingIdDoc.idNumber}` : ''}
+                </p>
+              </div>
+              <button
+                onClick={() => setViewingIdDoc(null)}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-full hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto py-4 flex items-center justify-center bg-slate-900/5 rounded-2xl my-3 p-2 min-h-[300px]">
+              {viewingIdDoc.url.startsWith('data:application/pdf') || viewingIdDoc.url.endsWith('.pdf') ? (
+                <iframe
+                  src={viewingIdDoc.url}
+                  className="w-full h-[60vh] rounded-xl border border-slate-200 bg-white"
+                  title={`ID Document for ${viewingIdDoc.name}`}
+                />
+              ) : (
+                <img
+                  src={viewingIdDoc.url}
+                  alt={`ID Document for ${viewingIdDoc.name}`}
+                  className="max-h-[65vh] max-w-full object-contain rounded-xl shadow-md border border-slate-200"
+                />
+              )}
+            </div>
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-[11px] text-slate-400">
+                🔒 Official Guest Record • Hotel Sherpa Soul
+              </span>
+              <div className="flex items-center gap-2">
+                <a
+                  href={viewingIdDoc.url}
+                  download={`Guest_ID_${viewingIdDoc.name.replace(/\s+/g, '_')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-xs font-bold flex items-center gap-1.5 text-slate-700 transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download</span>
+                </a>
+                <button
+                  onClick={() => setViewingIdDoc(null)}
+                  className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

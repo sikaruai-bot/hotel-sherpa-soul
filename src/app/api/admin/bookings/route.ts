@@ -60,6 +60,9 @@ export async function POST(request: Request) {
       guestPhone,
       guestWhatsApp,
       guestCountry,
+      guestIdType,
+      guestIdNumber,
+      guestIdDocumentUrl,
       totalAmountUSD,
       paymentStatus = 'UNPAID',
       paymentMethod,
@@ -79,6 +82,9 @@ export async function POST(request: Request) {
         guestPhone,
         guestWhatsApp: guestWhatsApp || guestPhone,
         guestCountry: guestCountry || null,
+        guestIdType: guestIdType || null,
+        guestIdNumber: guestIdNumber || null,
+        guestIdDocumentUrl: guestIdDocumentUrl || null,
         categoryId,
         physicalRoomId: physicalRoomId || null,
         totalAmountUSD: parseFloat(totalAmountUSD),
@@ -102,7 +108,18 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json();
-    const { bookingId, status, physicalRoomId, paymentStatus, paymentMethod, amountPaidUSD, notes } = body;
+    const {
+      bookingId,
+      status,
+      physicalRoomId,
+      paymentStatus,
+      paymentMethod,
+      amountPaidUSD,
+      guestIdType,
+      guestIdNumber,
+      guestIdDocumentUrl,
+      notes
+    } = body;
 
     const updated = await prisma.booking.update({
       where: { id: bookingId },
@@ -112,6 +129,9 @@ export async function PATCH(request: Request) {
         paymentStatus: paymentStatus || undefined,
         paymentMethod: paymentMethod || undefined,
         amountPaidUSD: amountPaidUSD !== undefined ? parseFloat(amountPaidUSD) : undefined,
+        guestIdType: guestIdType !== undefined ? guestIdType : undefined,
+        guestIdNumber: guestIdNumber !== undefined ? guestIdNumber : undefined,
+        guestIdDocumentUrl: guestIdDocumentUrl !== undefined ? guestIdDocumentUrl : undefined,
         notes: notes !== undefined ? notes : undefined,
       }
     });
