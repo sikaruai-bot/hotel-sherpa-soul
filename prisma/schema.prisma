@@ -1,0 +1,211 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("STAFF") // OWNER, ADMIN, STAFF
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model RoomCategory {
+  id             String         @id @default(cuid())
+  code           String         @unique // CATEGORY_A, CATEGORY_B, CATEGORY_C
+  slug           String         @unique // budget-family-room, family-room, deluxe-room
+  name           String
+  rateUSD        Float
+  maxAdults      Int
+  maxChildren    Int
+  maxGuests      Int
+  description    String
+  amenities      String         // Stored as JSON string array
+  images         String         // Stored as JSON string array
+  seoTitle       String?
+  seoDescription String?
+  sortOrder      Int            @default(0)
+  rooms          PhysicalRoom[]
+  bookings       Booking[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model PhysicalRoom {
+  id             String             @id @default(cuid())
+  roomNumber     String             @unique // 201, 202, 203, 301, 302, 303
+  floor          Int                // 2 or 3
+  categoryId     String
+  category       RoomCategory       @relation(fields: [categoryId], references: [id])
+  status         String             @default("AVAILABLE") // AVAILABLE, RESERVED, OCCUPIED, DIRTY, CLEANING, MAINTENANCE, OUT_OF_SERVICE
+  isSellable     Boolean            @default(true)
+  notes          String?
+  bookings       Booking[]
+  contracts      LongStayContract[]
+  kitchenUsers   KitchenUser[]
+  tasks          HousekeepingTask[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+model Facility {
+  id          String   @id @default(cuid())
+  code        String   @unique // e.g. KITCHEN_102
+  name        String   // Shared Kitchen (Room 102)
+  floor       Int      @default(1)
+  isSellable  Boolean  @default(false)
+  minStayDays Int      @default(14)
+  description String
+  images      String   // JSON string array
+  amenities   String   // JSON string array
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  bookingNumber   String        @unique // e.g. HSS-2026-1001
+  checkIn         DateTime
+  checkOut        DateTime
+  adults          Int
+  children        Int           @default(0)
+  guestName       String
+  guestEmail      String
+  guestPhone      String
+  guestWhatsApp   String?
+  guestCountry    String?
+  specialRequests String?
+  
+  categoryId      String
+  category        RoomCategory  @relation(fields: [categoryId], references: [id])
+  physicalRoomId  String?
+  physicalRoom    PhysicalRoom? @relation(fields: [physicalRoomId], references: [id])
+  
+  totalAmountUSD  Float
+  amountPaidUSD   Float         @default(0.0)
+  paymentStatus   String        @default("UNPAID") // UNPAID, PENDING, PAID, PARTIALLY_PAID, REFUNDED
+  paymentMethod   String?       // CASH, BANK_TRANSFER, ONLINE_PAYMENT, OTA_PAYMENT
+  status          String        @default("PENDING") // PENDING, CONFIRMED, CHECKED_IN, CHECKED_OUT, CANCELLED, NO_SHOW
+  
+  source          String        @default("DIRECT_WEBSITE") // DIRECT_WEBSITE, WHATSAPP, PHONE, WALK_IN, BOOKING_COM, AGODA, AIRBNB, TRIP_COM, OTHER
+  utmSource       String?
+  utmMedium       String?
+  utmCampaign     String?
+  utmContent      String?
+  utmTerm         String?
+  
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Inquiry {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String?
+  message   String
+  status    String   @default("NEW") // NEW, REPLIED, ARCHIVED
+  createdAt DateTime @default(now())
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  guestName   String
+  guestOrigin String?
+  rating      Int      @default(5)
+  comment     String
+  source      String   @default("DIRECT") // DIRECT, GOOGLE, TRIPADVISOR, BOOKING_COM
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model Offer {
+  id          String   @id @default(cuid())
+  title       String
+  code        String   @unique
+  discountPct Float
+  startDate   DateTime
+  endDate     DateTime
+  description String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model BlogPost {
+  id             String    @id @default(cuid())
+  slug           String    @unique
+  title          String
+  content        String
+  excerpt        String?
+  featuredImage  String?
+  seoTitle       String?
+  seoDescription String?
+  author         String    @default("Hotel Sherpa Soul Team")
+  isPublished    Boolean   @default(true)
+  publishedAt    DateTime  @default(now())
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model SiteSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
+model LongStayContract {
+  id              String        @id @default(cuid())
+  guestName       String
+  email           String
+  phone           String
+  passport        String?
+  roomId          String
+  room            PhysicalRoom  @relation(fields: [roomId], references: [id])
+  startDate       DateTime
+  endDate         DateTime
+  monthlyRentUSD  Float
+  securityDepositUSD Float      @default(0)
+  kitchenAccess   Boolean       @default(true)
+  status          String        @default("ACTIVE")
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model KitchenUser {
+  id              String        @id @default(cuid())
+  guestName       String
+  roomId          String
+  room            PhysicalRoom  @relation(fields: [roomId], references: [id])
+  validFrom       DateTime
+  validTo         DateTime
+  depositUSD      Float         @default(0)
+  status          String        @default("ACTIVE")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model HousekeepingTask {
+  id           String       @id @default(cuid())
+  roomId       String
+  room         PhysicalRoom @relation(fields: [roomId], references: [id])
+  taskType     String
+  status       String       @default("PENDING")
+  assignedTo   String?
+  notes        String?
+  scheduledFor DateTime     @default(now())
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
