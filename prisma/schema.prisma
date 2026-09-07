@@ -52,6 +52,7 @@ model PhysicalRoom {
   contracts      LongStayContract[]
   kitchenUsers   KitchenUser[]
   tasks          HousekeepingTask[]
+  calendars      ExternalCalendar[]
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 }
@@ -103,6 +104,7 @@ model Booking {
   utmTerm         String?
   
   notes           String?
+  invoices        Invoice[]
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 }
@@ -209,3 +211,42 @@ model HousekeepingTask {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 }
+
+model Invoice {
+  id              String        @id @default(cuid())
+  invoiceNumber   String        @unique // e.g. INV-2026-001
+  bookingId       String?
+  booking         Booking?      @relation(fields: [bookingId], references: [id])
+  guestName       String
+  guestEmail      String?
+  guestPhone      String?
+  guestPassport   String?
+  roomNumber      String
+  checkIn         DateTime
+  checkOut        DateTime
+  items           String        // JSON string array of items { description, quantity, unitPrice, total }
+  subtotal        Float
+  taxAmount       Float         @default(0) // 13% VAT
+  serviceCharge   Float         @default(0) // 10% Service Charge
+  discount        Float         @default(0)
+  grandTotal      Float
+  amountPaid      Float         @default(0)
+  paymentMethod   String?       // CASH_NPR, CASH_USD, ESEWA, KHALTI, FONEPAY, CARD, BANK_TRANSFER, OTA
+  status          String        @default("UNPAID") // UNPAID, PARTIAL, PAID, VOID
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model ExternalCalendar {
+  id              String        @id @default(cuid())
+  roomId          String
+  room            PhysicalRoom  @relation(fields: [roomId], references: [id])
+  channel         String        // BOOKING_COM, AIRBNB, AGODA, TRIP_COM, OTHER
+  feedUrl         String
+  isActive        Boolean       @default(true)
+  lastSyncedAt    DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+

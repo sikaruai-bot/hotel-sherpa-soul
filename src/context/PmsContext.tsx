@@ -360,7 +360,7 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
   const [stopSellActive, setStopSellActive] = useState<boolean>(false);
 
-  // Load from LocalStorage if available
+  // Load from LocalStorage and sync with live DB
   useEffect(() => {
     try {
       const saved = localStorage.getItem('hotelsherpasoul_pms_data_v1');
@@ -381,6 +381,61 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.warn('LocalStorage not available or parse error', e);
     }
+
+    // Fetch live bookings and rooms from database
+    fetch('/api/admin/pms/front-desk')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.rooms && data.rooms.length > 0) {
+          const dbRooms: Room[] = data.rooms.map((r: any) => ({
+            id: r.id,
+            number: r.roomNumber,
+            floor: r.floor,
+            type: r.category?.name || 'Standard',
+            capacity: r.category?.maxGuests || 3,
+            bedType: r.category?.code === 'CATEGORY_B' ? '1 King + 1 Single' : '1 Queen Bed',
+            dailyRate: r.category?.rateUSD ? Math.round(r.category.rateUSD * 135) : 3500,
+            weeklyRate: 20000,
+            monthlyRate: 45000,
+            status: r.status === 'OCCUPIED' ? 'OCCUPIED' : r.status === 'DIRTY' ? 'CLEANING_REQUIRED' : r.status === 'MAINTENANCE' ? 'UNDER_MAINTENANCE' : 'AVAILABLE',
+            kitchenEligible: true,
+            longStayEligible: true,
+            currentGuest: r.bookings?.find((b: any) => b.status === 'CHECKED_IN')?.guestName,
+          }));
+          setRooms(dbRooms);
+        }
+
+        if (data.success && (data.arrivals || data.inHouse)) {
+          const realBookings = [...(data.inHouse || []), ...(data.arrivals || [])];
+          if (realBookings.length > 0) {
+            const realRes: Reservation[] = realBookings.map((b: any) => ({
+              id: b.id,
+              otaReference: b.bookingNumber,
+              guestName: b.guestName,
+              email: b.guestEmail,
+              phone: b.guestPhone,
+              nationality: b.guestCountry || 'International',
+              passportNumber: 'REG-' + b.bookingNumber,
+              roomNumber: b.physicalRoom?.roomNumber || '201',
+              roomType: b.category?.name || 'Standard Room',
+              checkInDate: new Date(b.checkIn).toISOString().split('T')[0],
+              checkOutDate: new Date(b.checkOut).toISOString().split('T')[0],
+              adults: b.adults,
+              children: b.children || 0,
+              totalAmount: b.totalAmountUSD * 135,
+              paidAmount: (b.amountPaidUSD || 0) * 135,
+              status: b.status === 'CHECKED_IN' ? 'CHECKED_IN' : 'CONFIRMED',
+              source: b.source === 'DIRECT_WEBSITE' ? 'Direct Website' : b.source === 'WHATSAPP' ? 'WhatsApp' : b.source === 'WALK_IN' ? 'Walk-In' : 'Booking.com',
+              createdAt: b.createdAt,
+            }));
+            setReservations(prev => {
+              const existingIds = new Set(realRes.map(r => r.id));
+              return [...realRes, ...prev.filter(r => !existingIds.has(r.id))];
+            });
+          }
+        }
+      })
+      .catch(err => console.warn('Could not sync with live PMS backend', err));
   }, []);
 
   // Save changes to LocalStorage
@@ -495,6 +550,18 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notifications: updatedNotifs,
       stopSellActive,
     });
+
+    // Synchronize check-in with live database
+    fetch('/api/admin/pms/front-desk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'CHECK_IN',
+        bookingId: reservationId,
+        roomNumber: updatedRoomNumber,
+        passportNumber: passport,
+      }),
+    }).catch(err => console.warn('Live DB check-in sync failed', err));
   };
 
   const checkOutGuest = (reservationId: string, paymentDetails?: { method: Invoice['paymentMethod']; amount: number }) => {
@@ -549,6 +616,16 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notifications,
       stopSellActive,
     });
+
+    // Synchronize check-out with live database
+    fetch('/api/admin/pms/front-desk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'CHECK_OUT',
+        bookingId: reservationId,
+      }),
+    }).catch(err => console.warn('Live DB check-out sync failed', err));
   };
 
   const updateRoomStatus = (roomNumber: string, status: Room['status'], note?: string) => {
@@ -772,6 +849,24 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notifications,
       stopSellActive,
     });
+
+    // Synchronize invoice creation with live database
+    fetch('/api/admin/billing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bookingId: inv.reservationId,
+        guestName: inv.guestName,
+        roomNumber: inv.roomNumber,
+        checkIn: inv.invoiceDate,
+        checkOut: inv.dueDate,
+        items: inv.items,
+        discount: inv.discount || 0,
+        paymentMethod: inv.paymentMethod,
+        amountPaid: inv.paidAmount || 0,
+      }),
+    }).catch(err => console.warn('Live DB invoice sync failed', err));
+
     return newInvoice;
   };
 

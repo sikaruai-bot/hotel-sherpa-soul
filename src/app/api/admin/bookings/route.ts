@@ -1,7 +1,46 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { generateBookingNumber } from '@/lib/bookingEngine';
+
+export async function GET(request: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+    const q = (searchParams.get('q') || '').toLowerCase().trim();
+
+    const where: any = {};
+    if (status && status !== 'ALL') {
+      where.status = status;
+    }
+
+    const bookings = await prisma.booking.findMany({
+      where,
+      include: {
+        category: true,
+        physicalRoom: true,
+      },
+      orderBy: { checkIn: 'desc' },
+    });
+
+    let filtered = bookings;
+    if (q) {
+      filtered = bookings.filter(b =>
+        b.guestName.toLowerCase().includes(q) ||
+        b.bookingNumber.toLowerCase().includes(q) ||
+        b.guestEmail.toLowerCase().includes(q) ||
+        b.guestPhone.toLowerCase().includes(q)
+      );
+    }
+
+    return NextResponse.json({ success: true, count: filtered.length, bookings: filtered });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Error fetching bookings' }, { status: 500 });
+  }
+}
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
