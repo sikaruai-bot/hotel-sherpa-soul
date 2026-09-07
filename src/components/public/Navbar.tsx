@@ -52,24 +52,16 @@ export default function Navbar() {
 
       {/* Main Header Navigation */}
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-        {/* Brand Logo & Name */}
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="relative w-12 h-12 rounded-xl overflow-hidden shadow-sm border border-slate-200">
+        {/* Brand Logo */}
+        <Link href="/" className="flex items-center group py-1" aria-label="Hotel Sherpa Soul Homepage">
+          <div className="relative h-12 w-28 sm:h-14 sm:w-36 md:h-16 md:w-44 flex-shrink-0">
             <Image
               src="/images/logo.png"
               alt="Hotel Sherpa Soul Thamel Kathmandu"
               fill
-              className="object-cover group-hover:scale-105 transition-transform"
+              className="object-contain group-hover:scale-105 transition-transform"
               priority
             />
-          </div>
-          <div>
-            <span className="text-xl font-bold text-slate-900 tracking-tight block leading-tight">
-              Hotel Sherpa Soul
-            </span>
-            <span className="text-xs font-medium text-slate-500 tracking-wider uppercase block">
-              Thamel • Kathmandu
-            </span>
           </div>
         </Link>
 

@@ -53,12 +53,12 @@ export default function AdminSidebar({ user }: Props) {
       {/* Brand Header */}
       <div className="p-5 border-b border-slate-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-slate-700">
-            <Image src="/images/logo.png" alt="Hotel Sherpa Soul" fill className="object-cover" />
+          <div className="relative h-10 w-24 bg-white rounded-lg p-1 shadow-sm">
+            <Image src="/images/logo.png" alt="Hotel Sherpa Soul" fill className="object-contain" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-white">Sherpa Soul CMS</h2>
-            <span className="text-[10px] text-amber-400 font-medium">6 Sellable Rooms</span>
+            <h2 className="text-xs font-bold text-white leading-tight">Admin Portal</h2>
+            <span className="text-[10px] text-amber-400 font-medium">6 Rooms + PMS</span>
           </div>
         </div>
       </div>

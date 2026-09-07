@@ -47,18 +47,14 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* Col 1: About & Identity */}
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-slate-700">
+            <div className="flex items-center">
+              <div className="relative h-14 w-40 bg-white rounded-xl p-1.5 shadow-md">
                 <Image
                   src="/images/logo.png"
-                  alt="Hotel Sherpa Soul Logo"
+                  alt="Hotel Sherpa Soul Thamel Kathmandu"
                   fill
-                  className="object-cover"
+                  className="object-contain"
                 />
-              </div>
-              <div>
-                <span className="text-lg font-bold text-white block">Hotel Sherpa Soul</span>
-                <span className="text-xs text-slate-400 uppercase tracking-wider block">Thamel, Kathmandu</span>
               </div>
             </div>
             <p className="text-sm text-slate-400 leading-relaxed">

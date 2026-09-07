@@ -40,17 +40,17 @@ export default function AdminLoginPage() {
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl space-y-8">
-        <div className="text-center space-y-3">
-          <div className="relative w-16 h-16 mx-auto rounded-2xl overflow-hidden border border-slate-700 shadow-md">
+        <div className="text-center space-y-4">
+          <div className="relative h-20 w-44 mx-auto bg-white rounded-2xl p-2 shadow-lg">
             <Image
               src="/images/logo.png"
               alt="Hotel Sherpa Soul"
               fill
-              className="object-cover"
+              className="object-contain"
+              priority
             />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Hotel Sherpa Soul</h1>
             <p className="text-xs font-medium text-slate-400">Owner & Staff Administration Portal</p>
           </div>
         </div>
