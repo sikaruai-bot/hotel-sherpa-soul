@@ -95,6 +95,18 @@ export default function Footer() {
                   </svg>
                 </a>
                 <a
+                  href="https://www.tiktok.com/@hotelsherpasoul"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackEvent('social_click', { platform: 'tiktok' })}
+                  className="w-9 h-9 rounded-full bg-slate-800 hover:bg-black hover:text-[#00f2fe] text-slate-300 flex items-center justify-center transition-all border border-slate-700 shadow-sm group"
+                  aria-label="Hotel Sherpa Soul TikTok Profile"
+                >
+                  <svg className="w-4 h-4 fill-current group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
+                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.298-.002.595.042.88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.04-.1z"/>
+                  </svg>
+                </a>
+                <a
                   href="https://wa.me/9779851068219?text=Hello%20Hotel%20Sherpa%20Soul"
                   target="_blank"
                   rel="noopener noreferrer"

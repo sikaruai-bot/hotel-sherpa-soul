@@ -11,7 +11,8 @@ export default function JsonLd() {
     "email": "info@hotelsherpasoul.com",
     "sameAs": [
       "https://www.facebook.com/Sherpasoul/",
-      "https://www.instagram.com/hotelsherpasoul/"
+      "https://www.instagram.com/hotelsherpasoul/",
+      "https://www.tiktok.com/@hotelsherpasoul"
     ],
     "address": {
       "@type": "PostalAddress",
