@@ -1,9 +1,10 @@
 import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { CheckCircle2, Calendar, Users, MapPin, Phone, MessageCircle, Printer, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Calendar, Users, MapPin, Phone, MessageCircle, Mail, Printer, ArrowRight } from 'lucide-react';
 import prisma from '@/lib/prisma';
 import ConfirmationAnalytics from '@/components/public/ConfirmationAnalytics';
+import PrintReceiptButton from '@/components/public/PrintReceiptButton';
 import type { Metadata } from 'next';
 
 interface Props {
@@ -69,18 +70,24 @@ export default async function BookingConfirmationPage({ params }: Props) {
         </div>
         <div className="space-y-1">
           <span className="text-xs font-bold text-emerald-800 uppercase tracking-widest">
-            Reservation Confirmed
+            Reservation Confirmed &bull; Thank You!
           </span>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
             Thank You, {booking.guestName}!
           </h1>
           <p className="text-xs sm:text-sm text-slate-600">
-            Your direct booking reference is <strong className="text-slate-900 font-mono text-base">{booking.bookingNumber}</strong>
+            Your direct booking reference is <strong className="text-slate-900 font-mono text-base">#{booking.bookingNumber}</strong>
           </p>
         </div>
 
-        {/* WhatsApp Fast Confirmation CTA */}
-        <div className="pt-2">
+        {/* Automated Email Status Notice */}
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-emerald-200 text-xs sm:text-sm text-emerald-800 shadow-xs">
+          <Mail className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>Automated confirmation &amp; receipt dispatched to <strong>{booking.guestEmail}</strong></span>
+        </div>
+
+        {/* Fast Actions: WhatsApp & Print */}
+        <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
           <a
             href={waUrl}
             target="_blank"
@@ -88,8 +95,9 @@ export default async function BookingConfirmationPage({ params }: Props) {
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition-all active:scale-95"
           >
             <MessageCircle className="w-5 h-5" />
-            <span>Confirm Instant Receipt on WhatsApp</span>
+            <span>Open Instant WhatsApp Voucher</span>
           </a>
+          <PrintReceiptButton />
         </div>
       </div>
 
