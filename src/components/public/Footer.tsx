@@ -82,6 +82,16 @@ export default function Footer() {
                     <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
                   </svg>
                 </a>
+                <a
+                  href="https://wa.me/9779851068219?text=Hello%20Hotel%20Sherpa%20Soul"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackEvent('whatsapp_click', { placement: 'footer_social_icon' })}
+                  className="w-9 h-9 rounded-full bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white flex items-center justify-center transition-colors border border-slate-700 shadow-sm group"
+                  aria-label="Chat on WhatsApp +977 9851068219"
+                >
+                  <MessageCircle className="w-4 h-4 text-emerald-400 group-hover:text-white group-hover:scale-110 transition-transform" />
+                </a>
               </div>
             </div>
           </div>
