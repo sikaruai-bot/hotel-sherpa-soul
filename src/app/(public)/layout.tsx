@@ -3,6 +3,7 @@ import Navbar from '@/components/public/Navbar';
 import Footer from '@/components/public/Footer';
 import MobileStickyBar from '@/components/public/MobileStickyBar';
 import CookieConsent from '@/components/public/CookieConsent';
+import ChatbotWidget from '@/components/public/ChatbotWidget';
 
 export default function PublicLayout({
   children,
@@ -18,6 +19,7 @@ export default function PublicLayout({
       <Footer />
       <MobileStickyBar />
       <CookieConsent />
+      <ChatbotWidget />
     </div>
   );
 }
