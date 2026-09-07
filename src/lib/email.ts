@@ -15,6 +15,8 @@ export interface BookingEmailData {
   guestPhone: string;
   guestWhatsApp?: string;
   guestCountry?: string;
+  guestIdType?: string;
+  guestIdNumber?: string;
   specialRequests?: string;
   totalUSD: number;
   paymentStatus?: string;
@@ -109,6 +111,11 @@ export async function sendBookingNotifications(data: BookingEmailData) {
           <tr style="border-bottom: 1px solid #f1f5f9;">
             <td style="padding: 10px 0; color: #64748b;">Nationality:</td>
             <td style="padding: 10px 0; font-weight: 600; color: #0f172a;">${data.guestCountry}</td>
+          </tr>` : ''}
+          ${data.guestIdType ? `
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 10px 0; color: #64748b;">Identity Document:</td>
+            <td style="padding: 10px 0; font-weight: 600; color: #0f172a;">${data.guestIdType}${data.guestIdNumber ? ` (Doc #: ${data.guestIdNumber})` : ''}</td>
           </tr>` : ''}
           <tr style="border-bottom: 1px solid #f1f5f9;">
             <td style="padding: 10px 0; color: #64748b;">Room Category:</td>

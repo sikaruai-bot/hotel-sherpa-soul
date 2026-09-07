@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { Calendar, Users, ShieldCheck, Check, AlertCircle, Sparkles, Tag, ArrowRight, Loader2 } from 'lucide-react';
+import { Calendar, Users, ShieldCheck, Check, AlertCircle, Sparkles, Tag, ArrowRight, Loader2, Upload, FileText, X, Lock } from 'lucide-react';
 import { trackEvent } from '@/lib/analytics';
+import { ALL_COUNTRIES, POPULAR_COUNTRIES, ID_TYPES } from '@/lib/countries';
 
 interface RoomCat {
   id: string;
@@ -56,8 +57,42 @@ export default function BookingEngineClient({ initialCategories }: Props) {
   const [guestEmail, setGuestEmail] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [guestWhatsApp, setGuestWhatsApp] = useState('');
-  const [guestCountry, setGuestCountry] = useState('');
+  const [guestCountry, setGuestCountry] = useState('Nepal');
+  const [guestIdType, setGuestIdType] = useState('PASSPORT');
+  const [guestIdNumber, setGuestIdNumber] = useState('');
+  const [guestIdDocument, setGuestIdDocument] = useState<string | null>(null);
+  const [guestIdFileName, setGuestIdFileName] = useState<string>('');
+  const [uploadError, setUploadError] = useState<string>('');
   const [specialRequests, setSpecialRequests] = useState('');
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadError('');
+
+    if (file.size > 4 * 1024 * 1024) {
+      setUploadError('File exceeds 4MB limit. Please upload an ID photo or PDF under 4MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      const result = uploadEvent.target?.result as string;
+      setGuestIdDocument(result);
+      setGuestIdFileName(file.name);
+    };
+    reader.onerror = () => {
+      setUploadError('Failed to read document file. Please try another format.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveDocument = () => {
+    setGuestIdDocument(null);
+    setGuestIdFileName('');
+    setUploadError('');
+  };
 
   // Status & Dynamic Availability
   const [submitting, setSubmitting] = useState(false);
@@ -140,6 +175,9 @@ export default function BookingEngineClient({ initialCategories }: Props) {
         guestPhone,
         guestWhatsApp: guestWhatsApp || guestPhone,
         guestCountry,
+        guestIdType,
+        guestIdNumber: guestIdNumber.trim() || undefined,
+        guestIdDocument: guestIdDocument || undefined,
         specialRequests,
         promoCode,
         utmSource,
@@ -439,16 +477,127 @@ export default function BookingEngineClient({ initialCategories }: Props) {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                Country of Residence
+                Country / Nationality *
+              </label>
+              <select
+                value={guestCountry}
+                onChange={e => setGuestCountry(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm bg-white"
+              >
+                <optgroup label="Top Destinations">
+                  {POPULAR_COUNTRIES.map(c => (
+                    <option key={`pop_${c.code}`} value={c.name}>
+                      {c.flag} {c.name}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="All Countries">
+                  {ALL_COUNTRIES.map(c => (
+                    <option key={`all_${c.code}`} value={c.name}>
+                      {c.flag} {c.name}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Identity Document Type *
+              </label>
+              <select
+                value={guestIdType}
+                onChange={e => setGuestIdType(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm bg-white"
+              >
+                {ID_TYPES.map(t => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                ID / Document Number (Optional)
               </label>
               <input
                 type="text"
-                value={guestCountry}
-                onChange={e => setGuestCountry(e.target.value)}
-                placeholder="e.g. Australia, Germany, USA"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
+                value={guestIdNumber}
+                onChange={e => setGuestIdNumber(e.target.value)}
+                placeholder="e.g. PP092837 / 12-01-76-00123"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm font-mono uppercase"
               />
             </div>
+          </div>
+
+          {/* ID Document Photo / PDF Upload Box */}
+          <div className="space-y-2 p-4 sm:p-5 rounded-2xl bg-amber-50/60 border border-amber-200/80">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5">
+                <Upload className="w-4 h-4 text-amber-700" />
+                <span>Upload ID Document / Photo (Optional for Fast Check-in)</span>
+              </label>
+              <span className="text-[11px] text-amber-800 font-medium">Passport / Nagarikta / License</span>
+            </div>
+
+            {!guestIdDocument ? (
+              <label className="flex flex-col items-center justify-center border-2 border-dashed border-amber-300 rounded-xl p-4 sm:p-5 text-center cursor-pointer hover:bg-amber-100/40 transition-colors bg-white/70">
+                <Upload className="w-6 h-6 text-amber-600 mb-1.5" />
+                <span className="text-xs font-bold text-slate-800">Click or tap to upload photo or PDF scan</span>
+                <span className="text-[11px] text-slate-500 mt-0.5">JPG, PNG, WebP or PDF (Max 4MB)</span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+            ) : (
+              <div className="flex items-center justify-between bg-white border border-emerald-300 rounded-xl p-3 shadow-xs">
+                <div className="flex items-center gap-3 min-w-0">
+                  {guestIdDocument.startsWith('data:image') ? (
+                    <img
+                      src={guestIdDocument}
+                      alt="ID Preview"
+                      className="w-12 h-12 object-cover rounded-lg border border-slate-200 shrink-0 shadow-xs"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                      <FileText className="w-6 h-6" />
+                    </div>
+                  )}
+                  <div className="truncate">
+                    <p className="text-xs font-bold text-slate-800 truncate">{guestIdFileName}</p>
+                    <p className="text-[11px] text-emerald-700 flex items-center gap-1 font-medium">
+                      <Check className="w-3.5 h-3.5" />
+                      <span>ID attached ready for front desk check-in</span>
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveDocument}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors ml-2 shrink-0 cursor-pointer"
+                  title="Remove document"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {uploadError && (
+              <p className="text-xs text-red-600 font-medium">{uploadError}</p>
+            )}
+
+            <p className="text-[11px] text-slate-500 flex items-center gap-1 pt-1">
+              <Lock className="w-3 h-3 text-emerald-600 shrink-0" />
+              <span>Confidential &amp; Encrypted: Stored securely for Hotel Sherpa Soul front desk &amp; tourist safety registry.</span>
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
 
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">

@@ -83,6 +83,9 @@ model Booking {
   guestPhone      String
   guestWhatsApp   String?
   guestCountry    String?
+  guestIdType     String?       // PASSPORT, CITIZENSHIP, NATIONAL_ID, DRIVING_LICENSE, VOTER_ID, OTHER
+  guestIdNumber   String?
+  guestIdDocumentUrl String?
   specialRequests String?
   
   categoryId      String
