@@ -180,6 +180,8 @@ export async function POST(request: Request) {
       bookingId: booking.id,
       bookingNumber: booking.bookingNumber,
       whatsAppUrl,
+      allocatedRoom: allocatedRoom.roomNumber,
+      allocatedFloor: allocatedRoom.floor,
     });
   } catch (err: unknown) {
     console.error('Booking submission error:', err);

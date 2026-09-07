@@ -165,8 +165,47 @@ export default function BookingEngineClient({ initialCategories }: Props) {
         booking_number: data.bookingNumber,
       });
 
-      // Redirect to Confirmation Page
-      router.push(`/booking-confirmation/${data.bookingNumber}`);
+      // Persist client booking voucher for instant retrieval
+      const bookingData = {
+        bookingNumber: data.bookingNumber,
+        guestName,
+        guestEmail,
+        guestPhone,
+        categoryName: selectedCat?.name || 'Room',
+        checkIn,
+        checkOut,
+        nights,
+        adults: parseInt(adults),
+        children: parseInt(children),
+        totalAmountUSD: grandTotal,
+        specialRequests: specialRequests || null,
+        roomNumber: data.allocatedRoom || '201',
+        floor: data.allocatedFloor || 2,
+        whatsAppUrl: data.whatsAppUrl,
+      };
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(`hss_booking_${data.bookingNumber}`, JSON.stringify(bookingData));
+        sessionStorage.setItem('hss_last_booking', JSON.stringify(bookingData));
+      }
+
+      // Build robust query params so confirmation NEVER fails on serverless container switches
+      const q = new URLSearchParams({
+        name: guestName,
+        email: guestEmail,
+        phone: guestPhone,
+        cat: selectedCat?.name || '',
+        in: checkIn,
+        out: checkOut,
+        nights: nights.toString(),
+        adults: adults.toString(),
+        children: children.toString(),
+        total: grandTotal.toFixed(0),
+        room: String(data.allocatedRoom || '201'),
+        floor: String(data.allocatedFloor || '2'),
+      });
+
+      router.push(`/booking-confirmation/${data.bookingNumber}?${q.toString()}`);
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : 'An error occurred.');
       setSubmitting(false);
