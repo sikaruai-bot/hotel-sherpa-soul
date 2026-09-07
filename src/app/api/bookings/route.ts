@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { generateBookingNumber, buildWhatsAppBookingUrl } from '@/lib/bookingEngine';
+import { sendBookingNotifications } from '@/lib/email';
 
 export async function POST(request: Request) {
   try {
@@ -149,6 +150,30 @@ export async function POST(request: Request) {
       guestName,
       totalUSD: totalAmountUSD,
     });
+
+    // Dispatch automated confirmation emails (Hotel Official Alert + Guest Confirmation)
+    try {
+      await sendBookingNotifications({
+        bookingNumber: booking.bookingNumber,
+        categoryName: category.name,
+        roomNumber: allocatedRoom.roomNumber,
+        floor: allocatedRoom.floor,
+        checkIn: checkInDate,
+        checkOut: checkOutDate,
+        nights,
+        adults: parseInt(adults),
+        children: parseInt(children),
+        guestName,
+        guestEmail,
+        guestPhone,
+        guestWhatsApp: guestWhatsApp || guestPhone,
+        guestCountry: guestCountry || undefined,
+        specialRequests: specialRequests || undefined,
+        totalUSD: totalAmountUSD,
+      });
+    } catch (emailErr) {
+      console.error('[Booking API] Non-fatal email error:', emailErr);
+    }
 
     return NextResponse.json({
       success: true,
