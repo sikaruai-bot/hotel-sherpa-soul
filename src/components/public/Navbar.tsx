@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Menu, X, Phone, MessageCircle, CalendarCheck, ShieldCheck } from 'lucide-react';
 import { trackEvent } from '@/lib/analytics';
+import LanguageSelector from '@/components/public/LanguageSelector';
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -27,7 +28,10 @@ export default function Navbar() {
             <span className="hidden sm:inline text-slate-500">•</span>
             <span className="text-amber-400 font-semibold">“No Restaurant. No Noise. Sleep Well.”</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2.5 sm:gap-4">
+            {/* Multi-Language Selector Dropdown */}
+            <LanguageSelector variant="topbar" />
+
             <a
               href="tel:+9779851068219"
               onClick={() => handlePhone('topbar')}
@@ -44,7 +48,7 @@ export default function Navbar() {
               className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-semibold transition-colors"
             >
               <MessageCircle className="w-3.5 h-3.5" />
-              <span>WhatsApp Us</span>
+              <span className="hidden xs:inline">WhatsApp Us</span>
             </a>
           </div>
         </div>
@@ -223,6 +227,11 @@ export default function Navbar() {
             </Link>
           </div>
 
+          {/* Mobile Multi-Language Selector */}
+          <div className="pt-3 border-t border-slate-100">
+            <LanguageSelector variant="mobile" />
+          </div>
+
           <div className="pt-2">
             <Link
               href="/book"
@@ -234,6 +243,9 @@ export default function Navbar() {
           </div>
         </div>
       )}
+
+      {/* Hidden Google Translate Target */}
+      <div id="google_translate_element" style={{ display: 'none' }} />
     </header>
   );
 }
