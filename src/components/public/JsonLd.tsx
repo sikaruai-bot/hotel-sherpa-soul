@@ -10,7 +10,8 @@ export default function JsonLd() {
     "telephone": ["+9779851068219", "+97714530311"],
     "email": "info@hotelsherpasoul.com",
     "sameAs": [
-      "https://www.facebook.com/Sherpasoul/"
+      "https://www.facebook.com/Sherpasoul/",
+      "https://www.instagram.com/hotelsherpasoul/"
     ],
     "address": {
       "@type": "PostalAddress",

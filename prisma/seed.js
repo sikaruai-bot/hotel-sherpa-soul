@@ -155,6 +155,7 @@ async function main() {
     { key: 'landline', value: '+977-1 4530311', description: 'Official Landline Phone' },
     { key: 'whatsapp', value: '9779851068219', description: 'WhatsApp Contact Number' },
     { key: 'facebook', value: 'https://www.facebook.com/Sherpasoul/', description: 'Official Facebook Page URL' },
+    { key: 'instagram', value: 'https://www.instagram.com/hotelsherpasoul/', description: 'Official Instagram Profile URL' },
     { key: 'email', value: 'info@hotelsherpasoul.com', description: 'Official Business Email' },
     { key: 'check_in_time', value: '14:00', description: 'Standard Check-in Time' },
     { key: 'check_out_time', value: '12:00', description: 'Standard Check-out Time' },
