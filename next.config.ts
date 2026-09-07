@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   compress: true,
+  outputFileTracingIncludes: {
+    '/**/*': ['./prisma/dev.db'],
+  },
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [
