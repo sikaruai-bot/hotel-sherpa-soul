@@ -10,6 +10,7 @@ All accounts, domain names, hosting, code, database, and credentials belong excl
 * **Primary Client Email:** `mingmasaino@gmail.com`
 * **Official Hotel Email:** `info@hotelsherpasoul.com`
 * **Official Hotel Phone / WhatsApp:** `+977 9851068219`
+* **Official Hotel Landline:** `+977-1 4530311`
 
 ---
 

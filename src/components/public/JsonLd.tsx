@@ -7,7 +7,7 @@ export default function JsonLd() {
     "name": "Hotel Sherpa Soul",
     "description": "A peaceful and affordable hotel in Thamel, Kathmandu with no restaurant noise, offering clean rooms, high-speed Wi-Fi, and a dedicated shared kitchen for long stays.",
     "url": "https://hotelsherpasoul.com",
-    "telephone": "+9779851068219",
+    "telephone": ["+9779851068219", "+97714530311"],
     "email": "info@hotelsherpasoul.com",
     "address": {
       "@type": "PostalAddress",

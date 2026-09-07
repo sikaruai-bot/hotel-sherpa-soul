@@ -43,10 +43,10 @@ export default function ContactPage() {
                 <div>
                   <span className="font-semibold text-slate-900 block">Phone</span>
                   <a href="tel:+9779851068219" className="text-blue-600 hover:underline block">
-                    +977 9851068219
+                    +977 9851068219 (Mobile)
                   </a>
-                  <a href="tel:+9779852030175" className="text-slate-500 hover:underline block text-xs">
-                    +977-9852030175
+                  <a href="tel:+97714530311" className="text-slate-600 hover:underline block text-sm">
+                    +977-1 4530311 (Landline)
                   </a>
                 </div>
               </div>

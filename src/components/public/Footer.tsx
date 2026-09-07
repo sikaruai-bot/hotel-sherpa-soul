@@ -151,15 +151,24 @@ export default function Footer() {
                 <MapPin className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                 <span>Thamel, Kathmandu, Nepal</span>
               </div>
-              <div className="flex items-center gap-2.5">
-                <Phone className="w-4 h-4 text-emerald-400 shrink-0" />
-                <a
-                  href="tel:+9779851068219"
-                  onClick={() => trackEvent('phone_click', { placement: 'footer' })}
-                  className="text-slate-300 hover:text-white transition-colors"
-                >
-                  +977 9851068219
-                </a>
+              <div className="flex items-start gap-2.5">
+                <Phone className="w-4 h-4 text-emerald-400 shrink-0 mt-1" />
+                <div className="flex flex-col text-sm">
+                  <a
+                    href="tel:+9779851068219"
+                    onClick={() => trackEvent('phone_click', { placement: 'footer' })}
+                    className="text-slate-300 hover:text-white transition-colors"
+                  >
+                    +977 9851068219 (Mobile)
+                  </a>
+                  <a
+                    href="tel:+97714530311"
+                    onClick={() => trackEvent('phone_click', { placement: 'footer_landline' })}
+                    className="text-slate-400 hover:text-white transition-colors text-xs"
+                  >
+                    +977-1 4530311 (Landline)
+                  </a>
+                </div>
               </div>
               <div className="flex items-center gap-2.5">
                 <MessageCircle className="w-4 h-4 text-emerald-400 shrink-0" />
