@@ -2,8 +2,29 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { generateBookingNumber, buildWhatsAppBookingUrl } from '@/lib/bookingEngine';
 import { sendBookingNotifications } from '@/lib/email';
+import { checkRateLimit } from '@/lib/rateLimiter';
 
 export async function POST(request: Request) {
+  // 1. Rate limiting protection: Max 12 bookings per hour per IP
+  const rateLimit = checkRateLimit(request, 'booking_submit', {
+    windowMs: 60 * 60 * 1000,
+    max: 12,
+  });
+
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      {
+        error: 'Too many booking requests. Please wait a few minutes before submitting again or contact us directly on WhatsApp.',
+      },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)),
+        },
+      }
+    );
+  }
+
   try {
     const body = await request.json();
     const {
@@ -27,8 +48,13 @@ export async function POST(request: Request) {
       utmCampaign,
     } = body;
 
+    // 2. Input validation
     if (!checkIn || !checkOut || !categoryId || !guestName || !guestEmail || !guestPhone) {
       return NextResponse.json({ error: 'Missing required booking information.' }, { status: 400 });
+    }
+
+    if (guestName.length > 100 || guestEmail.length > 100 || guestPhone.length > 30) {
+      return NextResponse.json({ error: 'Input exceeds permissible length.' }, { status: 400 });
     }
 
     const checkInDate = new Date(checkIn);
@@ -38,114 +64,133 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid check-in and check-out dates.' }, { status: 400 });
     }
 
+    // Past date check
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (checkInDate < today) {
+      return NextResponse.json({ error: 'Check-in date cannot be in the past.' }, { status: 400 });
+    }
+
     const nights = Math.max(1, Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)));
-
-    // Fetch Category
-    const category = await prisma.roomCategory.findUnique({
-      where: { id: categoryId },
-      include: {
-        rooms: {
-          where: { isSellable: true } // Only the 6 sellable physical rooms!
-        }
-      }
-    });
-
-    if (!category) {
-      return NextResponse.json({ error: 'Selected room category does not exist.' }, { status: 404 });
+    if (nights > 90) {
+      return NextResponse.json({ error: 'For stays over 90 days, please contact hotel management directly.' }, { status: 400 });
     }
 
-    // Capacity check
-    const totalGuests = adults + children;
-    if (adults > category.maxAdults || children > category.maxChildren || totalGuests > category.maxGuests) {
-      return NextResponse.json({
-        error: `Exceeds maximum occupancy for ${category.name} (Max ${category.maxAdults} adults + ${category.maxChildren} children, total ${category.maxGuests} guests).`
-      }, { status: 400 });
-    }
-
-    // Find conflicting bookings
-    const conflictingBookings = await prisma.booking.findMany({
-      where: {
-        status: { notIn: ['CANCELLED', 'NO_SHOW'] },
-        AND: [
-          { checkIn: { lt: checkOutDate } },
-          { checkOut: { gt: checkInDate } }
-        ]
-      },
-      select: {
-        id: true,
-        categoryId: true,
-        physicalRoomId: true,
-      }
-    });
-
-    // Determine available physical rooms mapped to this category
-    const bookedRoomIds = new Set(conflictingBookings.map(b => b.physicalRoomId).filter(Boolean));
-    const availablePhysicalRooms = category.rooms.filter(r => !bookedRoomIds.has(r.id));
-
-    if (availablePhysicalRooms.length === 0) {
-      return NextResponse.json({
-        error: `Sorry, ${category.name} is fully booked for the selected dates.`
-      }, { status: 409 });
-    }
-
-    // Allocate first available physical room
-    const allocatedRoom = availablePhysicalRooms[0];
-
-    // Price & Discount calculation
-    let subtotalUSD = category.rateUSD * nights;
-    let discountUSD = 0;
-
-    if (promoCode) {
-      const codeUpper = promoCode.trim().toUpperCase();
-      const offer = await prisma.offer.findFirst({
-        where: {
-          code: codeUpper,
-          isActive: true,
-          startDate: { lte: new Date() },
-          endDate: { gte: new Date() }
-        }
+    // 3. Atomic Database Transaction with Overbooking Lock
+    const transactionResult = await prisma.$transaction(async (tx) => {
+      // Fetch Category with its physical rooms
+      const category = await tx.roomCategory.findUnique({
+        where: { id: categoryId },
+        include: {
+          rooms: {
+            where: { isSellable: true }, // Exactly 6 sellable physical rooms
+          },
+        },
       });
-      if (offer) {
-        discountUSD = (subtotalUSD * offer.discountPct) / 100;
+
+      if (!category) {
+        throw new Error('CATEGORY_NOT_FOUND');
       }
-    }
 
-    const totalAmountUSD = Math.max(0, subtotalUSD - discountUSD);
-    const bookingNumber = generateBookingNumber();
+      // Capacity check
+      const totalGuests = (parseInt(adults) || 1) + (parseInt(children) || 0);
+      if (adults > category.maxAdults || children > category.maxChildren || totalGuests > category.maxGuests) {
+        throw new Error('CAPACITY_EXCEEDED');
+      }
 
-    // Create Booking in database
-    const booking = await prisma.booking.create({
-      data: {
-        bookingNumber,
-        checkIn: checkInDate,
-        checkOut: checkOutDate,
-        adults: parseInt(adults),
-        children: parseInt(children),
-        guestName,
-        guestEmail,
-        guestPhone,
-        guestWhatsApp: guestWhatsApp || guestPhone,
-        guestCountry: guestCountry || null,
-        guestIdType: guestIdType || null,
-        guestIdNumber: guestIdNumber || null,
-        guestIdDocumentUrl: guestIdDocument || null,
-        specialRequests: specialRequests || null,
-        categoryId: category.id,
-        physicalRoomId: allocatedRoom.id,
+      // Find all overlapping non-cancelled bookings across all rooms
+      const conflictingBookings = await tx.booking.findMany({
+        where: {
+          status: { notIn: ['CANCELLED', 'NO_SHOW'] },
+          AND: [
+            { checkIn: { lt: checkOutDate } },
+            { checkOut: { gt: checkInDate } },
+          ],
+        },
+        select: {
+          id: true,
+          categoryId: true,
+          physicalRoomId: true,
+        },
+      });
+
+      // Filter available physical rooms assigned to this category
+      const bookedRoomIds = new Set(conflictingBookings.map((b) => b.physicalRoomId).filter(Boolean));
+      const availablePhysicalRooms = category.rooms.filter((r) => !bookedRoomIds.has(r.id));
+
+      if (availablePhysicalRooms.length === 0) {
+        throw new Error('NO_ROOMS_AVAILABLE');
+      }
+
+      // Select first available physical room
+      const allocatedRoom = availablePhysicalRooms[0];
+
+      // Calculate price and promo discount
+      let subtotalUSD = category.rateUSD * nights;
+      let discountUSD = 0;
+
+      if (promoCode) {
+        const codeUpper = promoCode.trim().toUpperCase();
+        const offer = await tx.offer.findFirst({
+          where: {
+            code: codeUpper,
+            isActive: true,
+            startDate: { lte: new Date() },
+            endDate: { gte: new Date() },
+          },
+        });
+        if (offer) {
+          discountUSD = (subtotalUSD * offer.discountPct) / 100;
+        }
+      }
+
+      const totalAmountUSD = Math.max(0, subtotalUSD - discountUSD);
+      const bookingNumber = generateBookingNumber();
+
+      // Create Booking atomically
+      const booking = await tx.booking.create({
+        data: {
+          bookingNumber,
+          checkIn: checkInDate,
+          checkOut: checkOutDate,
+          adults: parseInt(adults),
+          children: parseInt(children),
+          guestName: guestName.trim(),
+          guestEmail: guestEmail.trim().toLowerCase(),
+          guestPhone: guestPhone.trim(),
+          guestWhatsApp: (guestWhatsApp || guestPhone).trim(),
+          guestCountry: guestCountry || null,
+          guestIdType: guestIdType || null,
+          guestIdNumber: guestIdNumber || null,
+          guestIdDocumentUrl: guestIdDocument || null,
+          specialRequests: specialRequests || null,
+          categoryId: category.id,
+          physicalRoomId: allocatedRoom.id,
+          totalAmountUSD,
+          paymentStatus: 'UNPAID',
+          status: 'CONFIRMED',
+          source: 'DIRECT_WEBSITE',
+          utmSource: utmSource || null,
+          utmMedium: utmMedium || null,
+          utmCampaign: utmCampaign || null,
+          notes: `Direct website booking. Allocated Room ${allocatedRoom.roomNumber} (Floor ${allocatedRoom.floor}).`,
+        },
+        include: {
+          category: true,
+          physicalRoom: true,
+        },
+      });
+
+      return {
+        booking,
+        category,
+        allocatedRoom,
         totalAmountUSD,
-        paymentStatus: 'UNPAID',
-        status: 'CONFIRMED',
-        source: 'DIRECT_WEBSITE',
-        utmSource: utmSource || null,
-        utmMedium: utmMedium || null,
-        utmCampaign: utmCampaign || null,
-        notes: `Direct website booking. Allocated Room ${allocatedRoom.roomNumber} (Floor ${allocatedRoom.floor}).`,
-      },
-      include: {
-        category: true,
-        physicalRoom: true,
-      }
+        nights,
+      };
     });
+
+    const { booking, category, allocatedRoom, totalAmountUSD } = transactionResult;
 
     const whatsAppUrl = buildWhatsAppBookingUrl({
       bookingNumber: booking.bookingNumber,
@@ -157,7 +202,7 @@ export async function POST(request: Request) {
       totalUSD: totalAmountUSD,
     });
 
-    // Dispatch automated confirmation emails (Hotel Official Alert + Guest Confirmation)
+    // 4. Non-blocking automated email notifications (Staff Alert + Guest Confirmation)
     try {
       await sendBookingNotifications({
         bookingNumber: booking.bookingNumber,
@@ -192,9 +237,32 @@ export async function POST(request: Request) {
       allocatedFloor: allocatedRoom.floor,
     });
   } catch (err: unknown) {
-    console.error('Booking submission error:', err);
+    const errorMsg = err instanceof Error ? err.message : String(err);
+
+    if (errorMsg === 'NO_ROOMS_AVAILABLE') {
+      return NextResponse.json(
+        { error: 'Sorry, this room category is fully booked for the selected dates. Please select different dates or another room category.' },
+        { status: 409 }
+      );
+    }
+
+    if (errorMsg === 'CAPACITY_EXCEEDED') {
+      return NextResponse.json(
+        { error: 'Selected guest count exceeds room capacity.' },
+        { status: 400 }
+      );
+    }
+
+    if (errorMsg === 'CATEGORY_NOT_FOUND') {
+      return NextResponse.json(
+        { error: 'Selected room category does not exist.' },
+        { status: 404 }
+      );
+    }
+
+    console.error('[Booking API] Submission error:', err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'An error occurred processing the reservation.' },
+      { error: 'An error occurred processing your reservation. Please try again or contact us on WhatsApp.' },
       { status: 500 }
     );
   }

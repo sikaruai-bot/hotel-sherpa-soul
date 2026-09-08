@@ -2,9 +2,15 @@ import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 
-let dbUrl = process.env.DATABASE_URL;
+let dbUrl = process.env.DATABASE_URL || 'file:./dev.db';
 
-if (process.env.VERCEL) {
+// Check if database URL is a persistent cloud database (Postgres, MySQL, etc.)
+const isCloudDatabase = dbUrl.startsWith('postgres://') ||
+  dbUrl.startsWith('postgresql://') ||
+  dbUrl.startsWith('mysql://');
+
+// If using local SQLite on Vercel Serverless, copy template to writable /tmp
+if (process.env.VERCEL && !isCloudDatabase && dbUrl.startsWith('file:')) {
   const tmpDbPath = '/tmp/dev.db';
   if (!fs.existsSync(tmpDbPath)) {
     const srcDb = path.join(process.cwd(), 'prisma', 'dev.db');
@@ -34,4 +40,3 @@ export const prisma =
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
 export default prisma;
-

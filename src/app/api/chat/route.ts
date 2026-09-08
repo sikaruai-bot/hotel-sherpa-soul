@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkRateLimit } from '@/lib/rateLimiter';
 
 interface ChatResponse {
   reply: string;
@@ -183,6 +184,22 @@ function answerQuery(query: string): ChatResponse {
 }
 
 export async function POST(req: NextRequest) {
+  // Rate limit: Max 30 questions per 10 minutes per IP
+  const rateLimit = checkRateLimit(req, 'ai_chat', {
+    windowMs: 10 * 60 * 1000,
+    max: 30,
+  });
+
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      {
+        reply: 'You have sent several messages. For detailed or immediate inquiries, please connect directly with Mr. Mingma Sherpa on WhatsApp!',
+        actions: [{ label: 'Chat on WhatsApp', url: KNOWLEDGE_BASE.whatsappUrl, isWhatsApp: true }],
+      },
+      { status: 429 }
+    );
+  }
+
   try {
     const { message } = await req.json();
     if (!message || typeof message !== 'string') {

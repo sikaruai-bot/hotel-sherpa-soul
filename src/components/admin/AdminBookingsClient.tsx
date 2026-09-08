@@ -160,13 +160,25 @@ export default function AdminBookingsClient({ initialBookings, physicalRooms, ca
           </select>
         </div>
 
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-sm transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Walk-In / Manual Booking</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <a
+            href="/api/admin/backup"
+            download
+            className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm"
+            title="Download full offline database backup"
+          >
+            <Download className="w-4 h-4 text-amber-600" />
+            <span className="hidden sm:inline">Backup Database</span>
+          </a>
+
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-sm transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Walk-In / Manual Booking</span>
+          </button>
+        </div>
       </div>
 
       {/* Bookings Table */}
