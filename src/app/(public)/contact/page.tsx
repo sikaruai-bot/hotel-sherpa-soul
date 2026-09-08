@@ -10,8 +10,31 @@ export const metadata: Metadata = {
 };
 
 export default function ContactPage() {
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://hotelsherpasoul.com',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Contact',
+        item: 'https://hotelsherpasoul.com/contact',
+      },
+    ],
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 space-y-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <div className="text-center space-y-3 max-w-3xl mx-auto">
         <span className="text-xs font-bold text-amber-600 uppercase tracking-widest bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
           We Are Here To Help

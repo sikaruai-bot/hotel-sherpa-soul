@@ -50,8 +50,65 @@ export default async function RoomDetailPage({ params }: Props) {
   try { amenities = JSON.parse(category.amenities); } catch { amenities = []; }
   try { images = JSON.parse(category.images); } catch { images = []; }
 
+  const roomSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'HotelRoom',
+    name: `${category.name} | Hotel Sherpa Soul Thamel`,
+    description: category.description,
+    url: `https://hotelsherpasoul.com/rooms/${category.slug}`,
+    occupancy: {
+      '@type': 'QuantitativeValue',
+      maxValue: category.maxGuests,
+    },
+    offers: {
+      '@type': 'Offer',
+      price: category.rateUSD.toFixed(2),
+      priceCurrency: 'USD',
+      availability: 'https://schema.org/InStock',
+      validFrom: new Date().toISOString(),
+    },
+    amenityFeature: amenities.map((a) => ({
+      '@type': 'LocationFeatureSpecification',
+      name: a,
+      value: true,
+    })),
+  };
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://hotelsherpasoul.com',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Rooms',
+        item: 'https://hotelsherpasoul.com/rooms',
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: category.name,
+        item: `https://hotelsherpasoul.com/rooms/${category.slug}`,
+      },
+    ],
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14 space-y-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(roomSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
         <Link href="/" className="hover:text-slate-900">Home</Link>

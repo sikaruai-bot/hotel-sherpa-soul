@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     description: "Comfortable, clean, and tranquil hotel in Thamel. No Restaurant. No Noise. Sleep Well. 6 sellable guest rooms & shared kitchen.",
     images: [
       {
-        url: "/images/doubleBedRoom.jpeg",
+        url: "https://hotelsherpasoul.com/images/doubleBedRoom.jpeg",
         width: 1200,
         height: 800,
         alt: "Hotel Sherpa Soul Thamel Kathmandu",
@@ -60,7 +60,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Hotel Sherpa Soul | Thamel, Kathmandu, Nepal",
     description: "Quiet and affordable hotel in Thamel. No Restaurant. No Noise. Sleep Well.",
-    images: ["/images/doubleBedRoom.jpeg"],
+    images: ["https://hotelsherpasoul.com/images/doubleBedRoom.jpeg"],
   },
   robots: {
     index: true,

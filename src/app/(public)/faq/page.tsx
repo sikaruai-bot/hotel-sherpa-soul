@@ -53,8 +53,25 @@ export default function FAQPage() {
     }
   ];
 
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.a,
+      },
+    })),
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 space-y-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
       <div className="text-center space-y-3">
         <span className="text-xs font-bold text-amber-600 uppercase tracking-widest bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
           Knowledge Base

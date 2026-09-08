@@ -10,8 +10,55 @@ export const metadata: Metadata = {
 };
 
 export default function LocationPage() {
+  const locationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Hotel',
+    name: 'Hotel Sherpa Soul',
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: 'Thamel',
+      addressLocality: 'Kathmandu',
+      postalCode: '44600',
+      addressCountry: 'NP',
+    },
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: 27.7154,
+      longitude: 85.3123,
+    },
+    hasMap: 'https://maps.google.com/?q=27.7154,85.3123',
+    telephone: '+9779851068219',
+  };
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://hotelsherpasoul.com',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Location & Map',
+        item: 'https://hotelsherpasoul.com/location',
+      },
+    ],
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 space-y-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(locationSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <div className="text-center space-y-3 max-w-3xl mx-auto">
         <span className="text-xs font-bold text-amber-600 uppercase tracking-widest bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
           Prime Location
