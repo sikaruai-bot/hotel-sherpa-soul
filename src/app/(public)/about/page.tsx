@@ -5,7 +5,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'About Our Quiet Hotel & Story in Thamel',
-  description: 'Learn the story of Hotel Sherpa Soul in Thamel, Kathmandu. Managed with personal Sherpa hospitality, offering 6 quiet guest rooms and a shared kitchen for long stays.',
+  description: 'Experience genuine Sherpa hospitality in Thamel, Kathmandu. A quiet sanctuary with 6 clean rooms, shared kitchen, and a peaceful environment to recharge.',
   alternates: { canonical: 'https://hotelsherpasoul.com/about' },
 };
 

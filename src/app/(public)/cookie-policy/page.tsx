@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Cookie Policy',
-  description: 'How Hotel Sherpa Soul utilizes essential cookies and marketing analytics.',
+  description: 'Understand how Hotel Sherpa Soul uses essential cookies to ensure seamless online room booking and secure guest session management.',
 };
 
 export default function CookiePolicyPage() {

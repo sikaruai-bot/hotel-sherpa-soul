@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Cancellation & Refund Policy',
-  description: 'Flexible direct booking cancellation policies at Hotel Sherpa Soul in Thamel Kathmandu.',
+  description: 'Flexible direct booking cancellation policy: free changes and cancellations up to 24 hours prior to check-in at Hotel Sherpa Soul Thamel, Nepal.',
 };
 
 export default function CancellationPolicyPage() {

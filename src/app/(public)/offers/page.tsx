@@ -6,7 +6,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Direct Booking Offers & 10% Discount Codes',
-  description: 'Exclusive direct booking specials: 10% instant discount code DIRECT10 and 15% long-stay discount LONGSTAY15 at Hotel Sherpa Soul in Thamel Kathmandu.',
+  description: 'Unlock exclusive direct hotel deals in Thamel: 10% instant off with promo code DIRECT10 and 15% discount on 2+ week extended stays with code LONGSTAY15.',
   alternates: { canonical: 'https://hotelsherpasoul.com/offers' },
 };
 

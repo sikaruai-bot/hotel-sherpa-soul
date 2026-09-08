@@ -7,7 +7,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Guest Rooms & Direct Rates ($20 - $30)',
-  description: 'Explore the 3 room categories at Hotel Sherpa Soul: Budget Family Room ($20), Family Room ($30), and Deluxe Room ($20). Exactly 6 sellable quiet guest rooms in central Thamel.',
+  description: 'Explore our 6 quiet rooms in central Thamel: Budget Family ($20), Family ($30), and Deluxe ($20). Enjoy clean beds, hot showers, and high-speed Wi-Fi.',
   alternates: { canonical: 'https://hotelsherpasoul.com/rooms' },
 };
 

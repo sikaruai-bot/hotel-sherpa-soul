@@ -10,7 +10,7 @@ interface Props {
 
 export const metadata: Metadata = {
   title: 'Booking Voucher & Confirmation',
-  description: 'Your direct reservation confirmation at Hotel Sherpa Soul in Thamel, Kathmandu.',
+  description: 'View your official direct room booking voucher, check-in instructions, and payment status at Hotel Sherpa Soul in Thamel, Kathmandu.',
 };
 
 export default async function BookingConfirmationPage({ params, searchParams }: Props) {

@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
-  description: 'Hotel Sherpa Soul privacy policy. How we collect and protect your contact and booking information.',
+  description: 'How Hotel Sherpa Soul safeguards guest personal details, direct reservation data, and communications under strict privacy guidelines.',
 };
 
 export default function PrivacyPolicyPage() {

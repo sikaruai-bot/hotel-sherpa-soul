@@ -5,7 +5,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Direct Online Booking & Instant Confirmation',
-  description: 'Book your quiet room directly with Hotel Sherpa Soul in Thamel, Kathmandu. Guaranteed best rate from USD $20/night, 10% direct booking discount, zero commission.',
+  description: 'Book quiet hotel rooms directly in Thamel Kathmandu from $20/night. Get instant confirmation, 10% direct discount code DIRECT10, and zero booking fees.',
   alternates: { canonical: 'https://hotelsherpasoul.com/book' },
 };
 

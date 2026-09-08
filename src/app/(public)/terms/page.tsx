@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Terms & Conditions',
-  description: 'Terms and conditions for room reservations at Hotel Sherpa Soul in Thamel, Kathmandu.',
+  description: 'Review booking policies, guest capacity limits, check-in rules, and stay terms for Hotel Sherpa Soul in central Thamel, Kathmandu.',
 };
 
 export default function TermsPage() {

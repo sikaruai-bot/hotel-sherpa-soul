@@ -7,7 +7,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Long Stay Rooms & Shared Kitchen (Room 102)',
-  description: 'Extended stay rooms in Thamel Kathmandu with full access to our fully equipped Shared Guest Kitchen (Room 102). Ideal for digital nomads and trekkers staying 2+ weeks.',
+  description: 'Extended stay rooms in Thamel Kathmandu with shared guest kitchen (Room 102), solar hot water, and fast Wi-Fi. Ideal for remote workers and long treks.',
   alternates: { canonical: 'https://hotelsherpasoul.com/long-stay' },
 };
 
