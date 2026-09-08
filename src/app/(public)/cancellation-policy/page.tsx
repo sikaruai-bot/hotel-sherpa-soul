@@ -2,7 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Cancellation & Refund Policy | Hotel Sherpa Soul Thamel',
+  title: 'Cancellation & Refund Policy',
   description: 'Flexible direct booking cancellation policies at Hotel Sherpa Soul in Thamel Kathmandu.',
 };
 

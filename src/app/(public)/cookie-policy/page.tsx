@@ -2,7 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Cookie Policy | Hotel Sherpa Soul Thamel Kathmandu',
+  title: 'Cookie Policy',
   description: 'How Hotel Sherpa Soul utilizes essential cookies and marketing analytics.',
 };
 

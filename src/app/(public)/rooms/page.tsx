@@ -6,7 +6,7 @@ import prisma from '@/lib/prisma';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Guest Rooms & Rates in Thamel Kathmandu | Hotel Sherpa Soul',
+  title: 'Guest Rooms & Direct Rates ($20 - $30)',
   description: 'Explore the 3 room categories at Hotel Sherpa Soul: Budget Family Room ($20), Family Room ($30), and Deluxe Room ($20). Exactly 6 sellable quiet guest rooms in central Thamel.',
   alternates: { canonical: 'https://hotelsherpasoul.com/rooms' },
 };

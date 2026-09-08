@@ -4,7 +4,7 @@ import ContactForm from '@/components/public/ContactForm';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Contact Us | Hotel Sherpa Soul Thamel Kathmandu',
+  title: 'Contact Us & WhatsApp Direct',
   description: 'Get in touch with Hotel Sherpa Soul in Thamel, Kathmandu. Contact owner Mingma Sherpa via WhatsApp (+977 9851068219), phone, or online inquiry form.',
   alternates: { canonical: 'https://hotelsherpasoul.com/contact' },
 };

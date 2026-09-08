@@ -4,7 +4,7 @@ import { MapPin, Navigation, Clock, Plane, Compass, AlertCircle, Phone, MessageC
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Location & Map | Hotel Sherpa Soul Thamel Kathmandu',
+  title: 'Location, Map & Airport Distance',
   description: 'How to find Hotel Sherpa Soul in Thamel Kathmandu. Travel times from Kathmandu Airport (TIA ~20 min), Pashupatinath (~15 min), and taxi directions.',
   alternates: { canonical: 'https://hotelsherpasoul.com/location' },
 };

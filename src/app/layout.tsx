@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://hotelsherpasoul.com"),
   title: {
     default: "Hotel Sherpa Soul | Peaceful & Affordable Hotel in Thamel, Kathmandu",
-    template: "%s | Hotel Sherpa Soul Thamel",
+    template: "%s | Hotel Sherpa Soul",
   },
   description: "Hotel Sherpa Soul in Thamel, Kathmandu. A tranquil sanctuary for trekkers, backpackers, couples and digital nomads. 'No Restaurant. No Noise. Sleep Well.' 6 clean guest rooms & shared kitchen for long stays.",
   keywords: [

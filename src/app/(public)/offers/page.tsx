@@ -5,7 +5,7 @@ import prisma from '@/lib/prisma';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Direct Booking Offers & Discount Codes | Hotel Sherpa Soul',
+  title: 'Direct Booking Offers & 10% Discount Codes',
   description: 'Exclusive direct booking specials: 10% instant discount code DIRECT10 and 15% long-stay discount LONGSTAY15 at Hotel Sherpa Soul in Thamel Kathmandu.',
   alternates: { canonical: 'https://hotelsherpasoul.com/offers' },
 };

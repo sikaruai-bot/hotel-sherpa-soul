@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Direct Online Booking | Hotel Sherpa Soul Thamel',
+  title: 'Direct Online Booking & Instant Confirmation',
   description: 'Book your quiet room directly with Hotel Sherpa Soul in Thamel, Kathmandu. Guaranteed best rate from USD $20/night, 10% direct booking discount, zero commission.',
   alternates: { canonical: 'https://hotelsherpasoul.com/book' },
 };

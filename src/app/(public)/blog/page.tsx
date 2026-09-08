@@ -5,7 +5,7 @@ import prisma from '@/lib/prisma';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Kathmandu Travel Guides & Trekking Tips | Hotel Sherpa Soul Blog',
+  title: 'Kathmandu Travel Guides & Trekking Tips',
   description: 'Expert Kathmandu travel guides: how to find a quiet hotel in Thamel, airport transport advice, and Nepal travel tips from Hotel Sherpa Soul.',
   alternates: { canonical: 'https://hotelsherpasoul.com/blog' },
 };

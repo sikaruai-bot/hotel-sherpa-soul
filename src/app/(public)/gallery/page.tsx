@@ -3,7 +3,7 @@ import Image from 'next/image';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Hotel Sherpa Soul Photo Gallery | Rooms & Facilities Thamel',
+  title: 'Photo Gallery & Authentic Room Pictures',
   description: 'View authentic high-resolution photos of Hotel Sherpa Soul in Thamel, Kathmandu: clean guest rooms, front desk, balcony view, and video tour.',
   alternates: { canonical: 'https://hotelsherpasoul.com/gallery' },
 };

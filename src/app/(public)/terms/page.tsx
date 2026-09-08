@@ -2,7 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Terms & Conditions | Hotel Sherpa Soul Thamel',
+  title: 'Terms & Conditions',
   description: 'Terms and conditions for room reservations at Hotel Sherpa Soul in Thamel, Kathmandu.',
 };
 

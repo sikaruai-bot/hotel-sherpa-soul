@@ -4,7 +4,7 @@ import { HelpCircle, MessageCircle } from 'lucide-react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Frequently Asked Questions (FAQ) | Hotel Sherpa Soul Thamel',
+  title: 'Frequently Asked Questions (FAQ)',
   description: 'Common questions about Hotel Sherpa Soul: Thamel location, airport distance, no-restaurant policy, Wi-Fi, 24/7 hot water, and direct booking perks.',
   alternates: { canonical: 'https://hotelsherpasoul.com/faq' },
 };

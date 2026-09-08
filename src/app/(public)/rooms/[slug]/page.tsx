@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!category) return { title: 'Room Not Found' };
 
   return {
-    title: category.seoTitle || `${category.name} in Thamel Kathmandu | Hotel Sherpa Soul`,
+    title: `${category.name} in Thamel`,
     description: category.seoDescription || category.description,
     alternates: { canonical: `https://hotelsherpasoul.com/rooms/${category.slug}` },
     openGraph: {

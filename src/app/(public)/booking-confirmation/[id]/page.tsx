@@ -9,7 +9,7 @@ interface Props {
 }
 
 export const metadata: Metadata = {
-  title: 'Booking Confirmation | Hotel Sherpa Soul Thamel',
+  title: 'Booking Voucher & Confirmation',
   description: 'Your direct reservation confirmation at Hotel Sherpa Soul in Thamel, Kathmandu.',
 };
 

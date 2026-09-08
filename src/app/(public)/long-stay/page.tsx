@@ -6,7 +6,7 @@ import prisma from '@/lib/prisma';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Long Stay Accommodation & Shared Kitchen | Hotel Sherpa Soul Kathmandu',
+  title: 'Long Stay Rooms & Shared Kitchen (Room 102)',
   description: 'Extended stay rooms in Thamel Kathmandu with full access to our fully equipped Shared Guest Kitchen (Room 102). Ideal for digital nomads and trekkers staying 2+ weeks.',
   alternates: { canonical: 'https://hotelsherpasoul.com/long-stay' },
 };
