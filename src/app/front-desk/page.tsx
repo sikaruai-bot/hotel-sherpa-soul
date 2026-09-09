@@ -63,11 +63,11 @@ export default function FrontDeskPage() {
         ...(extraCharges > 0 ? [{ description: 'Incidental / Kitchen / Laundry charges', quantity: 1, unitPrice: extraCharges, total: extraCharges }] : [])
       ],
       subtotal: selectedResForCheckOut.totalAmount + extraCharges,
-      taxAmount: Math.round((selectedResForCheckOut.totalAmount + extraCharges) * 0.13),
-      serviceCharge: Math.round((selectedResForCheckOut.totalAmount + extraCharges) * 0.10),
+      taxAmount: 0,
+      serviceCharge: 0,
       discount: 0,
-      grandTotal: Math.round((selectedResForCheckOut.totalAmount + extraCharges) * 1.23),
-      paidAmount: Math.round((selectedResForCheckOut.totalAmount + extraCharges) * 1.23),
+      grandTotal: selectedResForCheckOut.totalAmount + extraCharges,
+      paidAmount: selectedResForCheckOut.totalAmount + extraCharges,
       paymentMethod: paymentMethod as any,
       status: 'PAID',
     });

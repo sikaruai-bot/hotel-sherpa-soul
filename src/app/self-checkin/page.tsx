@@ -421,7 +421,7 @@ export default function SelfCheckInPage() {
                     </div>
 
                     <div className="text-[11px] text-slate-300 space-y-1">
-                      <p className="font-bold text-white">Hotel Sherpa Soul Pvt. Ltd. <span className="text-amber-400 font-mono font-normal ml-1">(PAN: 119205419)</span></p>
+                      <p className="font-bold text-white">Hotel Sherpa Soul <span className="text-amber-400 font-mono font-normal ml-1">(PAN: 119205419)</span></p>
                       <div className="flex items-center justify-center gap-2">
                         <span className="text-slate-400">eSewa / Fonepay ID:</span>
                         <span className="font-mono font-bold text-amber-300">9851068219</span>
@@ -666,7 +666,7 @@ export default function SelfCheckInPage() {
                   <Phone size={12} className="text-emerald-400" />
                   <span>Need Help?</span>
                 </div>
-                <p className="text-[10px]">+977-9851068219 (Manager WhatsApp 24/7)</p>
+                <p className="text-[10px]">+977-1-4530311, 9851068219 (Reception / WhatsApp)</p>
               </div>
             </div>
           </div>
@@ -675,7 +675,7 @@ export default function SelfCheckInPage() {
 
       {/* Footer */}
       <footer className="border-t border-slate-900 px-4 py-3 text-center text-[11px] text-slate-500">
-        Hotel Sherpa Soul Pvt. Ltd. • PAN No: 119205419 • Thamel, Kathmandu, Nepal
+        Hotel Sherpa Soul • PAN No: 119205419 • Thamel, Kathmandu, Nepal
       </footer>
     </div>
   );

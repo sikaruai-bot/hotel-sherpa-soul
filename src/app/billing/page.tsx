@@ -45,9 +45,9 @@ export default function BillingPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-            <FileText className="text-purple-600" /> Billing, Invoices & Tax Receipts
+            <FileText className="text-purple-600" /> Billing & Invoices (PAN बिजक)
           </h1>
-          <p className="text-xs text-slate-500">Official VAT invoices, eSewa/Khalti merchant collections & printable guest receipts</p>
+          <p className="text-xs text-slate-500">Official PAN bills, eSewa/Khalti merchant collections & printable guest receipts</p>
         </div>
       </div>
 
@@ -81,7 +81,7 @@ export default function BillingPage() {
       {/* Invoices Table */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <h2 className="font-bold text-slate-900 text-sm">Issued Hotel Tax Invoices</h2>
+          <h2 className="font-bold text-slate-900 text-sm">Issued Hotel PAN Bills (बिजक)</h2>
           <span className="text-xs text-slate-500 font-medium">{invoices.length} Invoices</span>
         </div>
 
@@ -89,10 +89,10 @@ export default function BillingPage() {
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="p-3.5">Invoice #</th>
+                <th className="p-3.5">Bill / Invoice #</th>
                 <th className="p-3.5">Guest & Room</th>
                 <th className="p-3.5">Subtotal</th>
-                <th className="p-3.5">VAT (13%)</th>
+                <th className="p-3.5">Discount</th>
                 <th className="p-3.5">Grand Total</th>
                 <th className="p-3.5">Status</th>
                 <th className="p-3.5 text-right">Actions</th>
@@ -110,9 +110,9 @@ export default function BillingPage() {
                     <div className="text-slate-500">Room {inv.roomNumber}</div>
                   </td>
                   <td className="p-3.5 text-slate-700">NPR {inv.subtotal.toLocaleString()}</td>
-                  <td className="p-3.5 text-slate-700">NPR {inv.taxAmount.toLocaleString()}</td>
+                  <td className="p-3.5 text-rose-600">{inv.discount > 0 ? `- NPR ${inv.discount.toLocaleString()}` : '-'}</td>
                   <td className="p-3.5 font-bold text-slate-900 text-sm">
-                    NPR {inv.grandTotal.toLocaleString()}
+                    NPR {(inv.subtotal - (inv.discount || 0)).toLocaleString()}
                   </td>
                   <td className="p-3.5">
                     {inv.status === 'PAID' ? (

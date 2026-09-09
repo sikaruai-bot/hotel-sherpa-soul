@@ -190,7 +190,7 @@ export async function POST(request: Request) {
             guestName: reservation.guest.name,
             roomNumber: reservation.room.roomNumber,
             subtotal: reservation.totalAmount,
-            tax: Math.round(reservation.totalAmount * 0.13),
+            tax: 0,
             total: reservation.totalAmount,
             paidAmount: finalPaidAmount,
             status: finalPaidAmount >= reservation.totalAmount ? InvoiceStatus.PAID : InvoiceStatus.PARTIAL,

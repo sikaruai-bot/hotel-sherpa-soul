@@ -13,23 +13,24 @@ interface PanInvoicePrintProps {
 export default function PanInvoicePrint({ invoice, onClose }: PanInvoicePrintProps) {
   // Configurable Hotel & Bill Profile
   const [hotelLogo, setHotelLogo] = useState<string>('/logo.png');
-  const [hotelName, setHotelName] = useState<string>('HOTEL SHERPA SOUL PVT. LTD.');
+  const [hotelName, setHotelName] = useState<string>('HOTEL SHERPA SOUL');
   const [hotelPan, setHotelPan] = useState<string>('119205419');
   const [hotelAddress, setHotelAddress] = useState<string>('Bhagawati Marg-26, Thamel, Kathmandu, Nepal');
-  const [hotelPhone, setHotelPhone] = useState<string>('+977 1-4700000, 9851000000');
+  const [hotelPhone, setHotelPhone] = useState<string>('+977-1-4530311, 9851068219');
   const [hotelEmail, setHotelEmail] = useState<string>('info@hotelsherpasoul.com');
   const [fiscalYear, setFiscalYear] = useState<string>('2081/082');
 
   // Customer PAN & Custom Notes
   const [guestPan, setGuestPan] = useState<string>('');
-  const [billType, setBillType] = useState<'TAX_INVOICE' | 'PAN_BILL'>('TAX_INVOICE');
+  const [billType, setBillType] = useState<'PAN_BILL'>('PAN_BILL');
   const [showSettings, setShowSettings] = useState<boolean>(false);
 
   const handlePrint = () => {
     window.print();
   };
 
-  const formattedAmountInWords = numberToWords(invoice.grandTotal);
+  const calculatedGrandTotal = invoice.subtotal - (invoice.discount || 0);
+  const formattedAmountInWords = numberToWords(calculatedGrandTotal);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto print:p-0 print:bg-white print:static print:overflow-visible">
@@ -38,35 +39,17 @@ export default function PanInvoicePrint({ invoice, onClose }: PanInvoicePrintPro
         {/* Modal Toolbar (Hidden during Print) */}
         <div className="flex flex-wrap justify-between items-center bg-slate-900 text-white px-5 py-3.5 print:hidden">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-md">
+            <span className="text-xs font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-md">
               Nepal IRD Standard
             </span>
             <span className="text-sm font-semibold">
-              {billType === 'TAX_INVOICE' ? 'Tax Invoice (कर बिजक)' : 'PAN Bill (बिजक)'}
+              PAN Bill (बिजक)
             </span>
           </div>
 
           <div className="flex items-center gap-2 mt-2 sm:mt-0">
-            {/* Toggle Bill Type */}
-            <div className="flex bg-slate-800 p-0.5 rounded-lg border border-slate-700 text-xs">
-              <button
-                type="button"
-                onClick={() => setBillType('TAX_INVOICE')}
-                className={`px-2.5 py-1 rounded-md font-semibold transition ${
-                  billType === 'TAX_INVOICE' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                Tax Invoice (VAT)
-              </button>
-              <button
-                type="button"
-                onClick={() => setBillType('PAN_BILL')}
-                className={`px-2.5 py-1 rounded-md font-semibold transition ${
-                  billType === 'PAN_BILL' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                PAN Bill
-              </button>
+            <div className="px-3 py-1 bg-slate-800 rounded-lg border border-slate-700 text-xs text-amber-300 font-semibold">
+              PAN Registered • No VAT / SC
             </div>
 
             <button
@@ -118,7 +101,7 @@ export default function PanInvoicePrint({ invoice, onClose }: PanInvoicePrintPro
                 />
               </div>
               <div>
-                <label className="block text-slate-600 font-medium mb-1">Hotel PAN / VAT No.</label>
+                <label className="block text-slate-600 font-medium mb-1">Hotel PAN No.</label>
                 <input
                   type="text"
                   value={hotelPan}
@@ -203,7 +186,7 @@ export default function PanInvoicePrint({ invoice, onClose }: PanInvoicePrintPro
           {/* 2. Bill Title */}
           <div className="text-center my-4">
             <h2 className="text-base font-black tracking-wider uppercase inline-block border-b-2 border-slate-900 pb-0.5">
-              {billType === 'TAX_INVOICE' ? 'TAX INVOICE / कर बिजक' : 'PAN BILL / बिजक'}
+              PAN BILL / बिजक
             </h2>
           </div>
 
@@ -220,7 +203,7 @@ export default function PanInvoicePrint({ invoice, onClose }: PanInvoicePrintPro
                 <span className="font-semibold text-slate-900">Room {invoice.roomNumber}</span>
               </div>
               <div className="flex">
-                <span className="w-28 text-slate-600">Buyer PAN / VAT:</span>
+                <span className="w-28 text-slate-600">Buyer PAN:</span>
                 <span className="font-mono font-semibold text-slate-900">{guestPan || 'N/A'}</span>
               </div>
               <div className="flex">
@@ -311,7 +294,7 @@ export default function PanInvoicePrint({ invoice, onClose }: PanInvoicePrintPro
             {/* Right: Numbers Summary */}
             <div className="space-y-1.5 text-right font-mono text-slate-800">
               <div className="flex justify-between">
-                <span className="font-sans text-slate-600">Total Amount (Subtotal):</span>
+                <span className="font-sans text-slate-600">Total Amount (जम्मा रकम):</span>
                 <span>NPR {invoice.subtotal.toLocaleString()}</span>
               </div>
 
@@ -322,23 +305,9 @@ export default function PanInvoicePrint({ invoice, onClose }: PanInvoicePrintPro
                 </div>
               )}
 
-              {invoice.serviceCharge > 0 && (
-                <div className="flex justify-between">
-                  <span className="font-sans text-slate-600">Service Charge (10%):</span>
-                  <span>NPR {invoice.serviceCharge.toLocaleString()}</span>
-                </div>
-              )}
-
-              {billType === 'TAX_INVOICE' && (
-                <div className="flex justify-between">
-                  <span className="font-sans text-slate-600">VAT (13% मूल्य अभिवृद्धि कर):</span>
-                  <span>NPR {invoice.taxAmount.toLocaleString()}</span>
-                </div>
-              )}
-
               <div className="flex justify-between text-sm font-black text-slate-950 pt-2 border-t-2 border-slate-800">
                 <span className="font-sans">Grand Total (कुल जम्मा):</span>
-                <span>NPR {invoice.grandTotal.toLocaleString()}</span>
+                <span>NPR {calculatedGrandTotal.toLocaleString()}</span>
               </div>
 
               <div className="flex justify-between font-bold text-emerald-700 pt-1">
@@ -346,10 +315,10 @@ export default function PanInvoicePrint({ invoice, onClose }: PanInvoicePrintPro
                 <span>NPR {invoice.paidAmount.toLocaleString()}</span>
               </div>
 
-              {invoice.grandTotal - invoice.paidAmount > 0 && (
+              {calculatedGrandTotal - invoice.paidAmount > 0 && (
                 <div className="flex justify-between font-bold text-rose-600">
                   <span className="font-sans">Balance Due (बाँकी रकम):</span>
-                  <span>NPR {(invoice.grandTotal - invoice.paidAmount).toLocaleString()}</span>
+                  <span>NPR {(calculatedGrandTotal - invoice.paidAmount).toLocaleString()}</span>
                 </div>
               )}
             </div>

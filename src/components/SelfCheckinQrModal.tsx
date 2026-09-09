@@ -97,7 +97,7 @@ export default function SelfCheckinQrModal({ isOpen, onClose }: SelfCheckinQrMod
 
             {/* Quick emergency contact footer on standee */}
             <div className="pt-3 border-t border-slate-800 text-[10px] text-slate-400 space-y-0.5">
-              <p>PAN: <span className="text-amber-400 font-bold font-mono">119205419</span> • Reception: <span className="text-white font-bold">+977-9851068219</span></p>
+              <p>PAN: <span className="text-amber-400 font-bold font-mono">119205419</span> • Reception: <span className="text-white font-bold">+977-1-4530311, 9851068219</span></p>
               <p>Complimentary WiFi • Hot Shower • Shared Kitchen</p>
             </div>
           </div>

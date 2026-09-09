@@ -345,7 +345,7 @@ export default function LongStayPage() {
                   <img src="/logo.png" alt="Hotel Sherpa Soul" className="max-h-12 w-auto object-contain" />
                 </div>
                 <h3 className="font-bold text-base">MONTHLY RESIDENCY AGREEMENT</h3>
-                <p className="text-slate-500 font-medium">Hotel Sherpa Soul Pvt. Ltd. • PAN No: 119205419 • Thamel, Kathmandu</p>
+                <p className="text-slate-500 font-medium">Hotel Sherpa Soul • PAN No: 119205419 • Thamel, Kathmandu</p>
               </div>
               <p><strong>Tenant:</strong> {selectedContract.guestName} (Passport: {selectedContract.passport || 'Verified'})</p>
               <p><strong>Assigned Unit:</strong> Room {selectedContract.roomNumber}</p>

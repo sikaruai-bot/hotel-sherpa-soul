@@ -333,11 +333,11 @@ const initialInvoices: Invoice[] = [
       { description: 'Shared Kitchen Pass Add-on (3 Days)', quantity: 3, unitPrice: 500, total: 1500 }
     ],
     subtotal: 12000,
-    taxAmount: 1560, // 13% VAT
-    serviceCharge: 1200, // 10%
+    taxAmount: 0,
+    serviceCharge: 0,
     discount: 500,
-    grandTotal: 14260,
-    paidAmount: 14260,
+    grandTotal: 11500,
+    paidAmount: 11500,
     paymentMethod: 'eSewa',
     status: 'PAID',
   },
@@ -352,10 +352,10 @@ const initialInvoices: Invoice[] = [
       { description: 'Standard Double Room (2 Nights)', quantity: 2, unitPrice: 3500, total: 7000 }
     ],
     subtotal: 7000,
-    taxAmount: 910,
-    serviceCharge: 700,
+    taxAmount: 0,
+    serviceCharge: 0,
     discount: 0,
-    grandTotal: 8610,
+    grandTotal: 7000,
     paidAmount: 0,
     status: 'UNPAID',
   }
