@@ -133,6 +133,21 @@ export interface NotificationItem {
   status: 'Delivered' | 'Action Required' | 'Resolved';
 }
 
+export interface RoomConflictDetail {
+  type: 'RESERVATION' | 'LONG_STAY' | 'MAINTENANCE';
+  title: string;
+  guestName: string;
+  checkInDate: string;
+  checkOutDate: string;
+  source?: string;
+}
+
+export interface RoomAvailabilityStatus {
+  isAvailable: boolean;
+  conflicts: RoomConflictDetail[];
+  availableRooms: Room[];
+}
+
 interface PmsContextType {
   rooms: Room[];
   reservations: Reservation[];
@@ -147,7 +162,13 @@ interface PmsContextType {
   stopSellActive: boolean;
   isBackendConnected: boolean;
   refreshFromBackend: () => Promise<void>;
-  addReservation: (reservation: Omit<Reservation, 'id' | 'createdAt'>) => void;
+  checkRoomAvailability: (
+    roomNumber: string,
+    checkInDate: string,
+    checkOutDate: string,
+    excludeReservationId?: string
+  ) => RoomAvailabilityStatus;
+  addReservation: (reservation: Omit<Reservation, 'id' | 'createdAt'>) => { success: boolean; error?: string };
   checkInGuest: (reservationId: string, passport?: string) => void;
   checkOutGuest: (reservationId: string, paymentDetails?: { method: Invoice['paymentMethod']; amount: number }) => void;
   updateRoomStatus: (roomNumber: string, status: Room['status'], note?: string) => void;
@@ -456,7 +477,150 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const addReservation = (res: Omit<Reservation, 'id' | 'createdAt'>) => {
+  // ZERO-DOUBLE-BOOKING SHIELD: Real-Time Availability & Overlap Detector
+  const checkRoomAvailability = (
+    roomNumber: string,
+    checkInDate: string,
+    checkOutDate: string,
+    excludeReservationId?: string
+  ): RoomAvailabilityStatus => {
+    const start = new Date(checkInDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(checkOutDate);
+    end.setHours(0, 0, 0, 0);
+
+    const conflicts: RoomConflictDetail[] = [];
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
+      return {
+        isAvailable: false,
+        conflicts: [
+          {
+            type: 'RESERVATION',
+            title: 'Invalid Date Selection',
+            guestName: 'System Validation',
+            checkInDate,
+            checkOutDate,
+          },
+        ],
+        availableRooms: [],
+      };
+    }
+
+    // 1. Check reservation overlap for the target room
+    reservations.forEach((r) => {
+      if (excludeReservationId && r.id === excludeReservationId) return;
+      if (r.status === 'CANCELLED' || r.status === 'CHECKED_OUT') return;
+      if (r.roomNumber !== roomNumber) return;
+
+      const rStart = new Date(r.checkInDate);
+      rStart.setHours(0, 0, 0, 0);
+      const rEnd = new Date(r.checkOutDate);
+      rEnd.setHours(0, 0, 0, 0);
+
+      // Overlap formula: start < rEnd && end > rStart
+      if (start < rEnd && end > rStart) {
+        conflicts.push({
+          type: 'RESERVATION',
+          title: `Existing Booking (${r.status})`,
+          guestName: r.guestName,
+          checkInDate: r.checkInDate,
+          checkOutDate: r.checkOutDate,
+          source: r.source,
+        });
+      }
+    });
+
+    // 2. Check Long Stay contract overlap for the target room
+    contracts.forEach((c) => {
+      if (c.status !== 'ACTIVE' && c.status !== 'EXPIRING') return;
+      if (c.roomNumber !== roomNumber) return;
+
+      const cStart = new Date(c.startDate);
+      cStart.setHours(0, 0, 0, 0);
+      const cEnd = new Date(c.endDate);
+      cEnd.setHours(0, 0, 0, 0);
+
+      if (start < cEnd && end > cStart) {
+        conflicts.push({
+          type: 'LONG_STAY',
+          title: 'Active Long-Stay Lease',
+          guestName: c.guestName,
+          checkInDate: c.startDate,
+          checkOutDate: c.endDate,
+        });
+      }
+    });
+
+    // 3. Check maintenance status
+    const targetRoom = rooms.find((rm) => rm.number === roomNumber);
+    if (targetRoom && targetRoom.status === 'UNDER_MAINTENANCE') {
+      conflicts.push({
+        type: 'MAINTENANCE',
+        title: 'Room Under Maintenance',
+        guestName: 'Maintenance Block',
+        checkInDate,
+        checkOutDate,
+      });
+    }
+
+    // 4. Calculate which rooms are 100% available across the entire date range
+    const availableRooms = rooms.filter((rm) => {
+      if (rm.status === 'UNDER_MAINTENANCE') return false;
+
+      // check if any reservation collides with rm
+      const hasResOverlap = reservations.some((r) => {
+        if (excludeReservationId && r.id === excludeReservationId) return false;
+        if (r.status === 'CANCELLED' || r.status === 'CHECKED_OUT') return false;
+        if (r.roomNumber !== rm.number) return false;
+
+        const rStart = new Date(r.checkInDate);
+        rStart.setHours(0, 0, 0, 0);
+        const rEnd = new Date(r.checkOutDate);
+        rEnd.setHours(0, 0, 0, 0);
+
+        return start < rEnd && end > rStart;
+      });
+      if (hasResOverlap) return false;
+
+      // check if any contract collides with rm
+      const hasContractOverlap = contracts.some((c) => {
+        if (c.status !== 'ACTIVE' && c.status !== 'EXPIRING') return false;
+        if (c.roomNumber !== rm.number) return false;
+
+        const cStart = new Date(c.startDate);
+        cStart.setHours(0, 0, 0, 0);
+        const cEnd = new Date(c.endDate);
+        cEnd.setHours(0, 0, 0, 0);
+
+        return start < cEnd && end > cStart;
+      });
+      if (hasContractOverlap) return false;
+
+      return true;
+    });
+
+    return {
+      isAvailable: conflicts.length === 0,
+      conflicts,
+      availableRooms,
+    };
+  };
+
+  const addReservation = (res: Omit<Reservation, 'id' | 'createdAt'>): { success: boolean; error?: string } => {
+    // 1. Double-Booking Shield Check
+    const availability = checkRoomAvailability(res.roomNumber, res.checkInDate, res.checkOutDate);
+    if (!availability.isAvailable) {
+      const conflictMsg = availability.conflicts
+        .map((c) => `${c.title}: ${c.guestName} (${c.checkInDate} to ${c.checkOutDate})`)
+        .join('; ');
+      console.warn(`[PMS ZERO-DOUBLE-BOOKING SHIELD] Blocked booking for Room ${res.roomNumber}: ${conflictMsg}`);
+      return {
+        success: false,
+        error: `डबल बुकिङ रोकियो (Double Booking Prevented): Room ${res.roomNumber} is already booked for these dates [${conflictMsg}]. Please choose an available room.`,
+      };
+    }
+
     const newId = `RES-${Math.floor(1000 + Math.random() * 9000)}`;
     const newReservation: Reservation = {
       ...res,
@@ -483,7 +647,7 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newNotif: NotificationItem = {
       id: `NOTIF-${Date.now()}`,
       title: `New Reservation: ${res.guestName}`,
-      detail: `Room ${res.roomNumber} (${res.roomType}) reserved from ${res.checkInDate} to ${res.checkOutDate} via ${res.source}.`,
+      detail: `Room ${res.roomNumber} (${res.roomType}) reserved from ${res.checkInDate} to ${res.checkOutDate} via ${res.source}. (Shield verified: No double-booking conflict).`,
       timestamp: 'Just now',
       type: 'Booking',
       channel: 'WhatsApp',
@@ -512,6 +676,8 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(res),
     }).catch(err => console.warn('Sync reservation error:', err));
+
+    return { success: true };
   };
 
   const checkInGuest = (reservationId: string, passport?: string) => {
@@ -971,6 +1137,7 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         stopSellActive,
         isBackendConnected,
         refreshFromBackend,
+        checkRoomAvailability,
         addReservation,
         checkInGuest,
         checkOutGuest,

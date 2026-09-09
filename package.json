@@ -10,7 +10,8 @@
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
-    "db:seed": "node --import tsx/esm prisma/seed.ts"
+    "db:seed": "node --import tsx/esm prisma/seed.ts",
+    "deploy": "vercel --prod"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.21",
@@ -40,6 +41,7 @@
     "prisma": "^7.10.0",
     "tailwindcss": "^4",
     "tsx": "^4.19.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vercel": "^59.11.7"
   }
 }

@@ -12,9 +12,9 @@ interface PanInvoicePrintProps {
 
 export default function PanInvoicePrint({ invoice, onClose }: PanInvoicePrintProps) {
   // Configurable Hotel & Bill Profile
-  const [hotelLogo, setHotelLogo] = useState<string>('/logo.svg');
+  const [hotelLogo, setHotelLogo] = useState<string>('/logo.png');
   const [hotelName, setHotelName] = useState<string>('HOTEL SHERPA SOUL PVT. LTD.');
-  const [hotelPan, setHotelPan] = useState<string>('601928374');
+  const [hotelPan, setHotelPan] = useState<string>('119205419');
   const [hotelAddress, setHotelAddress] = useState<string>('Bhagawati Marg-26, Thamel, Kathmandu, Nepal');
   const [hotelPhone, setHotelPhone] = useState<string>('+977 1-4700000, 9851000000');
   const [hotelEmail, setHotelEmail] = useState<string>('info@hotelsherpasoul.com');
@@ -174,12 +174,12 @@ export default function PanInvoicePrint({ invoice, onClose }: PanInvoicePrintPro
           {/* 1. Header with Logo & Hotel Credentials */}
           <div className="flex flex-col sm:flex-row items-center justify-between border-b-2 border-slate-800 pb-5 gap-4">
             {/* Hotel Logo */}
-            <div className="w-64 h-16 relative flex items-center justify-start">
+            <div className="w-56 h-20 relative flex items-center justify-start">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={hotelLogo}
                 alt="Hotel Sherpa Soul Logo"
-                className="max-h-16 w-auto object-contain"
+                className="max-h-20 w-auto object-contain"
                 onError={(e) => {
                   // Fallback if custom logo fails
                   (e.target as HTMLElement).style.display = 'none';

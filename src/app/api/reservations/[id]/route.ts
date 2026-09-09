@@ -43,7 +43,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { status, passportNumber, paidAmount, specialRequests } = body;
+    const { status, passportNumber, paidAmount, specialRequests, checkInDate, checkOutDate, roomNumber, roomId } = body;
 
     const reservation = await prisma.reservation.findUnique({
       where: { id },
@@ -55,6 +55,51 @@ export async function PATCH(
         { success: false, error: 'Reservation not found' },
         { status: 404 }
       );
+    }
+
+    // Determine target room and dates
+    let targetRoomId = reservation.roomId;
+    if (roomNumber) {
+      const targetRoom = await prisma.room.findUnique({ where: { roomNumber: String(roomNumber) } });
+      if (!targetRoom) {
+        return NextResponse.json({ success: false, error: `Room ${roomNumber} not found` }, { status: 404 });
+      }
+      targetRoomId = targetRoom.id;
+    } else if (roomId) {
+      targetRoomId = roomId;
+    }
+
+    const newStart = checkInDate ? new Date(checkInDate) : reservation.checkInDate;
+    const newEnd = checkOutDate ? new Date(checkOutDate) : reservation.checkOutDate;
+
+    if (newStart >= newEnd) {
+      return NextResponse.json({ success: false, error: 'Check-out must be after check-in date.' }, { status: 400 });
+    }
+
+    // If dates or room are changing, verify no overlap with other reservations
+    if (checkInDate || checkOutDate || roomNumber || roomId) {
+      const conflict = await prisma.reservation.findFirst({
+        where: {
+          id: { not: id },
+          roomId: targetRoomId,
+          status: { in: [ReservationStatus.CONFIRMED, ReservationStatus.CHECKED_IN, ReservationStatus.PENDING] },
+          AND: [
+            { checkInDate: { lt: newEnd } },
+            { checkOutDate: { gt: newStart } },
+          ],
+        },
+        include: { guest: true },
+      });
+
+      if (conflict) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `DOUBLE_BOOKING_PREVENTED: Room is already booked for ${conflict.guest.name} from ${conflict.checkInDate.toISOString().split('T')[0]} to ${conflict.checkOutDate.toISOString().split('T')[0]}.`,
+          },
+          { status: 409 }
+        );
+      }
     }
 
     // If passport provided during check-in, update guest
@@ -72,6 +117,9 @@ export async function PATCH(
         ...(status && { status: status as ReservationStatus }),
         ...(paidAmount !== undefined && { paidAmount: Number(paidAmount) }),
         ...(specialRequests !== undefined && { specialRequests }),
+        ...(checkInDate && { checkInDate: newStart }),
+        ...(checkOutDate && { checkOutDate: newEnd }),
+        ...(targetRoomId !== reservation.roomId && { roomId: targetRoomId }),
       },
     });
 

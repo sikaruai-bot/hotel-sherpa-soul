@@ -339,9 +339,13 @@ export default function LongStayPage() {
             </div>
 
             <div className="p-5 bg-slate-50 border rounded-2xl space-y-3 text-xs">
-              <div className="text-center border-b pb-2">
+              <div className="text-center border-b pb-2 flex flex-col items-center">
+                <div className="h-12 w-32 mb-1 flex items-center justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/logo.png" alt="Hotel Sherpa Soul" className="max-h-12 w-auto object-contain" />
+                </div>
                 <h3 className="font-bold text-base">MONTHLY RESIDENCY AGREEMENT</h3>
-                <p className="text-slate-500">Hotel Sherpa Soul • Thamel, Kathmandu</p>
+                <p className="text-slate-500 font-medium">Hotel Sherpa Soul Pvt. Ltd. • PAN No: 119205419 • Thamel, Kathmandu</p>
               </div>
               <p><strong>Tenant:</strong> {selectedContract.guestName} (Passport: {selectedContract.passport || 'Verified'})</p>
               <p><strong>Assigned Unit:</strong> Room {selectedContract.roomNumber}</p>
@@ -352,7 +356,7 @@ export default function LongStayPage() {
               <p><strong>Notes:</strong> {selectedContract.notes}</p>
               <div className="pt-4 border-t flex justify-between text-[11px] text-slate-500">
                 <div>Tenant Signature: ____________</div>
-                <div>Management: Hotel Sherpa Soul</div>
+                <div>Management: Hotel Sherpa Soul (PAN: 119205419)</div>
               </div>
             </div>
           </div>

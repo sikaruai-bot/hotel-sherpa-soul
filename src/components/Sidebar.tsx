@@ -25,11 +25,20 @@ export default function Sidebar() {
 
   return (
     <aside className="w-64 bg-slate-900 text-white flex flex-col h-screen fixed top-0 left-0 z-20">
-      <div className="p-6 border-b border-slate-800">
-        <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-          <span>Hotel Sherpa Soul</span>
-        </h1>
-        <p className="text-xs text-slate-400 mt-1">PMS • Channel Manager • Thamel</p>
+      <div className="p-4 border-b border-slate-800">
+        <div className="flex items-center gap-3 bg-white/5 p-2 rounded-xl border border-white/10">
+          <div className="bg-white rounded-lg p-1 flex items-center justify-center h-12 w-14 shrink-0 shadow-sm overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="Hotel Sherpa Soul Logo" className="h-full w-full object-contain" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-sm font-bold tracking-tight text-white truncate">
+              Hotel Sherpa Soul
+            </h1>
+            <p className="text-[11px] text-amber-400 font-semibold font-mono">PAN: 119205419</p>
+            <p className="text-[10px] text-slate-400 truncate">Thamel, Kathmandu</p>
+          </div>
+        </div>
       </div>
 
       <nav className="flex-1 px-4 space-y-1.5 mt-4 overflow-y-auto">

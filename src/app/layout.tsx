@@ -10,6 +10,10 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Hotel Sherpa Soul | PMS & Channel Manager",
   description: "Cloud-Based Hotel Property Management System, Reservation Engine & Shared Kitchen Manager - Thamel, Kathmandu",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({

@@ -105,7 +105,18 @@ export async function POST(request: Request) {
       specialRequests,
     } = body;
 
-    // 1. Find Room
+    // 1. Validate Dates
+    const start = new Date(checkInDate);
+    const end = new Date(checkOutDate);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid dates: Check-out must be after check-in date.' },
+        { status: 400 }
+      );
+    }
+
+    // 2. Find Room
     const room = await prisma.room.findUnique({
       where: { roomNumber: String(roomNumber) },
       include: { roomType: true },
@@ -118,7 +129,74 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Find or create Guest
+    // 3. ZERO-DOUBLE-BOOKING SHIELD: Check existing overlapping reservations
+    const conflictingReservation = await prisma.reservation.findFirst({
+      where: {
+        roomId: room.id,
+        status: {
+          in: [ReservationStatus.CONFIRMED, ReservationStatus.CHECKED_IN, ReservationStatus.PENDING],
+        },
+        AND: [
+          { checkInDate: { lt: end } },
+          { checkOutDate: { gt: start } },
+        ],
+      },
+      include: { guest: true },
+    });
+
+    if (conflictingReservation) {
+      const existingIn = conflictingReservation.checkInDate.toISOString().split('T')[0];
+      const existingOut = conflictingReservation.checkOutDate.toISOString().split('T')[0];
+      return NextResponse.json(
+        {
+          success: false,
+          error: `DOUBLE_BOOKING_PREVENTED: Room ${roomNumber} is already booked for ${conflictingReservation.guest.name} from ${existingIn} to ${existingOut}. Please pick an alternative room.`,
+          conflict: {
+            type: 'RESERVATION',
+            guestName: conflictingReservation.guest.name,
+            checkInDate: existingIn,
+            checkOutDate: existingOut,
+            source: conflictingReservation.source,
+          },
+        },
+        { status: 409 }
+      );
+    }
+
+    // 4. ZERO-DOUBLE-BOOKING SHIELD: Check active Long-Stay Contracts
+    const conflictingContract = await prisma.longStayContract.findFirst({
+      where: {
+        roomId: room.id,
+        status: {
+          in: ['ACTIVE', 'EXPIRING'],
+        },
+        AND: [
+          { startDate: { lt: end } },
+          { endDate: { gt: start } },
+        ],
+      },
+      include: { guest: true },
+    });
+
+    if (conflictingContract) {
+      const leaseStart = conflictingContract.startDate.toISOString().split('T')[0];
+      const leaseEnd = conflictingContract.endDate.toISOString().split('T')[0];
+      return NextResponse.json(
+        {
+          success: false,
+          error: `DOUBLE_BOOKING_PREVENTED: Room ${roomNumber} is under an active Long-Stay lease for ${conflictingContract.guest.name} from ${leaseStart} to ${leaseEnd}.`,
+          conflict: {
+            type: 'LONG_STAY',
+            guestName: conflictingContract.guest.name,
+            checkInDate: leaseStart,
+            checkOutDate: leaseEnd,
+          },
+        },
+        { status: 409 }
+      );
+    }
+
+    // 5. Find or create Guest
     let guest = await prisma.guest.findFirst({
       where: {
         OR: [

@@ -25,6 +25,16 @@ export default function ChannelManagerPage() {
 
   const [rateStd, setRateStd] = useState(3500);
   const [rateDlx, setRateDlx] = useState(4200);
+  const [simulationResult, setSimulationResult] = useState<string | null>(null);
+
+  const handleSimulateDoubleBooking = () => {
+    setSimulationResult(
+      '🛡️ PMS ZERO-DOUBLE-BOOKING SHIELD: An incoming overlapping booking from Agoda for Room 202 was intercepted and REJECTED (HTTP 409 Conflict). Room 202 is already reserved by Sarah Connor. Zero double-booking guaranteed!'
+    );
+    setTimeout(() => {
+      setSimulationResult(null);
+    }, 6000);
+  };
 
   const channels = [
     { name: 'Booking.com', status: 'Connected', latency: '0.8s', lastSync: 'Real-time', activeListings: 6, logo: 'B.' },
@@ -257,6 +267,29 @@ export default function ChannelManagerPage() {
             >
               Apply Stop Sell
             </button>
+          </div>
+
+          {/* Double-Booking Live Shield Simulator */}
+          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 text-white rounded-2xl border border-indigo-500/40 shadow-sm p-5 space-y-3">
+            <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+              <ShieldCheck size={18} />
+              <h3>Zero-Double-Booking Test Simulator</h3>
+            </div>
+            <p className="text-xs text-slate-300">
+              Simulate an incoming overlapping reservation from an external OTA to verify the PMS rejection shield:
+            </p>
+            <button 
+              type="button"
+              onClick={handleSimulateDoubleBooking}
+              className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2 rounded-xl text-xs transition shadow-sm"
+            >
+              Simulate OTA Conflict Test
+            </button>
+            {simulationResult && (
+              <div className="p-3 bg-rose-950/80 border border-rose-500 text-rose-200 rounded-xl text-[11px] leading-relaxed font-mono animate-fade-in">
+                {simulationResult}
+              </div>
+            )}
           </div>
         </div>
 

@@ -58,15 +58,19 @@ export default function SelfCheckinQrModal({ isOpen, onClose }: SelfCheckinQrMod
             id="printable-standee" 
             className="w-full max-w-sm bg-gradient-to-b from-slate-900 to-slate-950 text-white rounded-3xl p-6 border-2 border-amber-500/40 shadow-xl text-center space-y-4 relative"
           >
-            {/* Mountain badge */}
+            {/* Mountain badge & PAN */}
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11px] font-bold">
               <Sparkles size={12} />
-              <span>Thamel, Kathmandu • Nepal</span>
+              <span>Thamel, Kathmandu • PAN: 119205419</span>
             </div>
 
-            {/* Hotel Title */}
-            <div>
-              <h3 className="text-2xl font-black tracking-tight text-white">Hotel Sherpa Soul</h3>
+            {/* Hotel Logo & Title */}
+            <div className="flex flex-col items-center">
+              <div className="bg-white rounded-2xl p-2.5 max-w-[200px] mb-2 shadow-lg">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo.png" alt="Hotel Sherpa Soul" className="w-full h-auto object-contain" />
+              </div>
+              <h3 className="text-xl font-black tracking-tight text-white">Hotel Sherpa Soul</h3>
               <p className="text-xs text-amber-400/90 font-medium tracking-wide mt-0.5">
                 No Restaurant. No Noise. Sleep Well.
               </p>
@@ -93,7 +97,7 @@ export default function SelfCheckinQrModal({ isOpen, onClose }: SelfCheckinQrMod
 
             {/* Quick emergency contact footer on standee */}
             <div className="pt-3 border-t border-slate-800 text-[10px] text-slate-400 space-y-0.5">
-              <p>Reception / Manager WhatsApp: <span className="text-white font-bold">+977-9851068219</span></p>
+              <p>PAN: <span className="text-amber-400 font-bold font-mono">119205419</span> • Reception: <span className="text-white font-bold">+977-9851068219</span></p>
               <p>Complimentary WiFi • Hot Shower • Shared Kitchen</p>
             </div>
           </div>

@@ -80,13 +80,16 @@ export default function LoginPage() {
       <div className="max-w-md w-full bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border border-white/20 p-6 sm:p-8 space-y-6">
         {/* Hotel Brand Header */}
         <div className="text-center space-y-2">
-          <div className="w-56 h-14 mx-auto flex items-center justify-center">
+          <div className="w-64 h-20 mx-auto flex items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="Hotel Sherpa Soul" className="max-h-14 w-auto object-contain" />
+            <img src="/logo.png" alt="Hotel Sherpa Soul" className="max-h-20 w-auto object-contain" />
           </div>
           <h1 className="text-xl font-black tracking-tight text-slate-900 mt-2">
             Front Desk & Staff Portal
           </h1>
+          <p className="text-xs font-semibold text-amber-800 font-mono">
+            PAN No: 119205419
+          </p>
           <p className="text-xs text-slate-500">
             Hotel Sherpa Soul PMS • Thamel, Kathmandu
           </p>

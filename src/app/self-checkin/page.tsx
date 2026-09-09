@@ -191,12 +191,13 @@ export default function SelfCheckInPage() {
       <header className="border-b border-slate-800/80 bg-slate-900/90 backdrop-blur-md sticky top-0 z-30 px-4 py-3.5">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center font-black text-slate-950 text-base shadow-md shadow-amber-500/20">
-              SS
+            <div className="h-10 w-14 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shadow-amber-500/20 overflow-hidden shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="Hotel Sherpa Soul" className="h-full w-full object-contain" />
             </div>
             <div>
               <h1 className="font-bold text-sm tracking-tight text-white leading-tight">Hotel Sherpa Soul</h1>
-              <p className="text-[11px] text-amber-400 font-medium">Self Check-In & Payment Portal</p>
+              <p className="text-[11px] text-amber-400 font-medium font-mono">PAN: 119205419 • Self Check-In</p>
             </div>
           </div>
           <span className="text-[10px] bg-emerald-950/80 border border-emerald-800 text-emerald-300 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -420,7 +421,7 @@ export default function SelfCheckInPage() {
                     </div>
 
                     <div className="text-[11px] text-slate-300 space-y-1">
-                      <p className="font-bold text-white">Hotel Sherpa Soul Pvt. Ltd.</p>
+                      <p className="font-bold text-white">Hotel Sherpa Soul Pvt. Ltd. <span className="text-amber-400 font-mono font-normal ml-1">(PAN: 119205419)</span></p>
                       <div className="flex items-center justify-center gap-2">
                         <span className="text-slate-400">eSewa / Fonepay ID:</span>
                         <span className="font-mono font-bold text-amber-300">9851068219</span>
@@ -673,8 +674,8 @@ export default function SelfCheckInPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 px-4 py-3 text-center text-[11px] text-slate-600">
-        Hotel Sherpa Soul • PMS Cloud Check-In Engine • Thamel, Nepal
+      <footer className="border-t border-slate-900 px-4 py-3 text-center text-[11px] text-slate-500">
+        Hotel Sherpa Soul Pvt. Ltd. • PAN No: 119205419 • Thamel, Kathmandu, Nepal
       </footer>
     </div>
   );

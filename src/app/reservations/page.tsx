@@ -16,8 +16,11 @@ import {
   Clock, 
   Filter,
   Layers,
-  CalendarDays
+  CalendarDays,
+  ShieldCheck,
+  AlertTriangle
 } from 'lucide-react';
+import Link from 'next/link';
 import { usePms, Reservation, Room } from '@/context/PmsContext';
 
 export default function ReservationsPage() {
@@ -187,16 +190,16 @@ export default function ReservationsPage() {
           </div>
 
           {/* New Reservation button */}
-          <button
-            onClick={() => setShowNewResModal(true)}
+          <Link
+            href="/reservations/new"
             className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-sm"
           >
             <Plus size={15} /> + New Reservation
-          </button>
+          </Link>
         </div>
       </div>
 
-      {/* Filter & Status Legend Bar */}
+      {/* Filter & Status Legend Bar with Double-Booking Shield */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
         <div className="flex flex-wrap items-center gap-3">
           <span className="font-bold text-slate-500 flex items-center gap-1">
@@ -225,8 +228,12 @@ export default function ReservationsPage() {
           </select>
         </div>
 
-        {/* Legend */}
+        {/* Double Booking Shield Badge & Legend */}
         <div className="flex flex-wrap items-center gap-3 text-[11px] font-medium text-slate-600">
+          <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-300 text-emerald-800 px-2.5 py-0.5 rounded-full font-bold">
+            <ShieldCheck size={13} className="text-emerald-600" />
+            <span>Zero-Double-Booking Shield: Active</span>
+          </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> Occupied
           </div>
@@ -374,8 +381,9 @@ export default function ReservationsPage() {
                       const targetDate = new Date(year, month, dayNum);
                       targetDate.setHours(0, 0, 0, 0);
 
-                      const booking = reservations.find(r => {
+                      const roomBookings = reservations.filter(r => {
                         if (r.roomNumber !== room.number) return false;
+                        if (r.status === 'CANCELLED') return false;
                         const checkIn = new Date(r.checkInDate);
                         checkIn.setHours(0, 0, 0, 0);
                         const checkOut = new Date(r.checkOutDate);
@@ -383,16 +391,26 @@ export default function ReservationsPage() {
                         return targetDate >= checkIn && targetDate <= checkOut;
                       });
 
+                      const hasConflict = roomBookings.length > 1;
+                      const booking = roomBookings[0];
                       const currentDayIsToday = isToday(dayNum);
 
                       return (
                         <td
                           key={`cell-${room.id}-${dayNum}`}
                           className={`p-1 border-l border-slate-100 text-center relative ${
-                            currentDayIsToday ? 'bg-amber-50/40' : ''
+                            hasConflict ? 'bg-rose-100/90 ring-1 ring-rose-400' : currentDayIsToday ? 'bg-amber-50/40' : ''
                           }`}
                         >
-                          {booking ? (
+                          {hasConflict ? (
+                            <div
+                              onClick={() => setSelectedRes(booking)}
+                              className="h-7 rounded-md cursor-pointer text-[9px] font-black flex items-center justify-center transition shadow-xs bg-rose-600 text-white animate-pulse"
+                              title={`⚠️ Double Booking Alert: ${roomBookings.length} overlapping reservations!`}
+                            >
+                              ⚠️ Overlap ({roomBookings.length})
+                            </div>
+                          ) : booking ? (
                             <div
                               onClick={() => setSelectedRes(booking)}
                               className={`h-7 rounded-md cursor-pointer text-[9px] font-bold flex items-center justify-center transition shadow-2xs hover:scale-105 ${
