@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { 
   CalendarDays, 
   LayoutDashboard, 
@@ -20,11 +21,39 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
-export default function Sidebar() {
+interface SidebarProps {
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
+}
+
+export default function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
   const { logout, setShowStaffModal } = useAuth();
+  const pathname = usePathname();
+
+  const getLinkClass = (path: string, specialColor?: string) => {
+    const isActive = pathname === path;
+    if (isActive) {
+      return 'flex items-center justify-between px-3 py-2.5 bg-blue-600 text-white rounded-xl font-bold shadow-md shadow-blue-600/30 transition-all';
+    }
+    return `flex items-center justify-between px-3 py-2 rounded-lg ${
+      specialColor || 'text-slate-400'
+    } hover:bg-slate-800 hover:text-white transition-colors`;
+  };
 
   return (
-    <aside className="w-64 bg-slate-900 text-white flex flex-col h-screen fixed top-0 left-0 z-20">
+    <>
+      {/* Mobile Backdrop */}
+      {mobileOpen && (
+        <div 
+          onClick={onCloseMobile} 
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-30 lg:hidden transition-opacity"
+          aria-hidden="true"
+        />
+      )}
+
+      <aside className={`w-64 bg-slate-900 text-white flex flex-col h-screen fixed top-0 left-0 z-40 lg:z-20 transition-transform duration-200 ease-in-out ${
+        mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'
+      }`}>
       <div className="p-4 border-b border-slate-800">
         <div className="flex items-center gap-3 bg-white/5 p-2 rounded-xl border border-white/10">
           <div className="bg-white rounded-lg p-1 flex items-center justify-center h-12 w-14 shrink-0 shadow-sm overflow-hidden">
@@ -42,86 +71,118 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 px-4 space-y-1.5 mt-4 overflow-y-auto">
-        <Link href="/" className="flex items-center gap-3 px-3 py-2 bg-slate-800 rounded-lg text-slate-100 hover:text-white transition-colors">
-          <LayoutDashboard size={18} />
-          <span className="text-sm font-medium">Dashboard</span>
+        <Link href="/" className={getLinkClass('/')}>
+          <div className="flex items-center gap-3">
+            <LayoutDashboard size={18} />
+            <span className="text-sm">Dashboard</span>
+          </div>
         </Link>
 
-        <Link href="/front-desk" className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
-          <CalendarDays size={18} />
-          <span className="text-sm font-medium">Front Desk & Check-in</span>
+        <Link href="/front-desk" className={getLinkClass('/front-desk')}>
+          <div className="flex items-center gap-3">
+            <CalendarDays size={18} />
+            <span className="text-sm">Front Desk & Check-in</span>
+          </div>
         </Link>
 
-        <Link href="/self-checkin" target="_blank" className="flex items-center gap-3 px-3 py-2 rounded-lg text-amber-300 hover:bg-slate-800 hover:text-white transition-colors">
-          <QrCode size={18} />
-          <span className="text-sm font-medium">Guest QR Self Check-In</span>
+        <Link href="/self-checkin" target="_blank" className={getLinkClass('/self-checkin', 'text-amber-300')}>
+          <div className="flex items-center gap-3">
+            <QrCode size={18} />
+            <span className="text-sm">Guest QR Self Check-In</span>
+          </div>
+          <span className="text-[10px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded font-mono font-bold">QR</span>
         </Link>
 
-        <Link href="/reservations" className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
-          <CalendarDays size={18} />
-          <span className="text-sm font-medium">Calendar & Bookings</span>
+        <Link href="/reservations" className={getLinkClass('/reservations')}>
+          <div className="flex items-center gap-3">
+            <CalendarDays size={18} className={pathname === '/reservations' ? 'text-white' : 'text-blue-400'} />
+            <span className="text-sm font-semibold">Calendar & Bookings</span>
+          </div>
+          {pathname !== '/reservations' && (
+            <span className="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded font-bold">Live</span>
+          )}
         </Link>
 
-        <Link href="/rooms" className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
-          <BedDouble size={18} />
-          <span className="text-sm font-medium">Rooms & Inventory</span>
+        <Link href="/rooms" className={getLinkClass('/rooms')}>
+          <div className="flex items-center gap-3">
+            <BedDouble size={18} />
+            <span className="text-sm">Rooms & Inventory</span>
+          </div>
         </Link>
 
         <div className="pt-3 pb-1 px-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">
           OTA & Channels
         </div>
 
-        <Link href="/channel-manager" className="flex items-center gap-3 px-3 py-2 rounded-lg text-blue-300 hover:bg-slate-800 hover:text-white transition-colors">
-          <Globe size={18} />
-          <span className="text-sm font-medium">Channel Manager Sync</span>
+        <Link href="/channel-manager" className={getLinkClass('/channel-manager', 'text-blue-300')}>
+          <div className="flex items-center gap-3">
+            <Globe size={18} />
+            <span className="text-sm font-medium">Channel Manager Sync</span>
+          </div>
         </Link>
 
-        <Link href="/notifications" className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
-          <Bell size={18} />
-          <span className="text-sm font-medium">Alerts & WhatsApp</span>
+        <Link href="/notifications" className={getLinkClass('/notifications')}>
+          <div className="flex items-center gap-3">
+            <Bell size={18} />
+            <span className="text-sm font-medium">Alerts & WhatsApp</span>
+          </div>
         </Link>
 
-        <Link href="/automation" className="flex items-center gap-3 px-3 py-2 rounded-lg text-amber-300 hover:bg-slate-800 hover:text-white transition-colors">
-          <Zap size={18} />
-          <span className="text-sm font-medium">Automations & Webhooks</span>
+        <Link href="/automation" className={getLinkClass('/automation', 'text-amber-300')}>
+          <div className="flex items-center gap-3">
+            <Zap size={18} />
+            <span className="text-sm font-medium">Automations & Webhooks</span>
+          </div>
         </Link>
 
         <div className="pt-3 pb-1 px-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">
           Specialty Operations
         </div>
 
-        <Link href="/long-stay" className="flex items-center gap-3 px-3 py-2 rounded-lg text-purple-300 hover:bg-slate-800 hover:text-white transition-colors">
-          <Home size={18} />
-          <span className="text-sm font-medium">Long Stay Management</span>
+        <Link href="/long-stay" className={getLinkClass('/long-stay', 'text-purple-300')}>
+          <div className="flex items-center gap-3">
+            <Home size={18} />
+            <span className="text-sm font-medium">Long Stay Management</span>
+          </div>
         </Link>
 
-        <Link href="/kitchen" className="flex items-center gap-3 px-3 py-2 rounded-lg text-amber-300 hover:bg-slate-800 hover:text-white transition-colors">
-          <ChefHat size={18} />
-          <span className="text-sm font-medium">Shared Kitchen</span>
+        <Link href="/kitchen" className={getLinkClass('/kitchen', 'text-amber-300')}>
+          <div className="flex items-center gap-3">
+            <ChefHat size={18} />
+            <span className="text-sm font-medium">Shared Kitchen</span>
+          </div>
         </Link>
 
-        <Link href="/housekeeping" className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
-          <Sparkles size={18} />
-          <span className="text-sm font-medium">Housekeeping</span>
+        <Link href="/housekeeping" className={getLinkClass('/housekeeping')}>
+          <div className="flex items-center gap-3">
+            <Sparkles size={18} />
+            <span className="text-sm font-medium">Housekeeping</span>
+          </div>
         </Link>
 
         <div className="pt-3 pb-1 px-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">
           Intelligence & Finance
         </div>
 
-        <Link href="/reports" className="flex items-center gap-3 px-3 py-2 rounded-lg text-emerald-300 hover:bg-slate-800 hover:text-white transition-colors">
-          <BrainCircuit size={18} />
-          <span className="text-sm font-medium">Reports & AI Forecast</span>
+        <Link href="/reports" className={getLinkClass('/reports', 'text-emerald-300')}>
+          <div className="flex items-center gap-3">
+            <BrainCircuit size={18} />
+            <span className="text-sm font-medium">Reports & AI Forecast</span>
+          </div>
         </Link>
 
-        <Link href="/guests" className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
-          <Users size={18} />
-          <span className="text-sm font-medium">Guests & CRM</span>
+        <Link href="/guests" className={getLinkClass('/guests')}>
+          <div className="flex items-center gap-3">
+            <Users size={18} />
+            <span className="text-sm font-medium">Guests & CRM</span>
+          </div>
         </Link>
 
-        <Link href="/billing" className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
-          <FileText size={18} />
-          <span className="text-sm font-medium">Billing & Invoices</span>
+        <Link href="/billing" className={getLinkClass('/billing')}>
+          <div className="flex items-center gap-3">
+            <FileText size={18} />
+            <span className="text-sm font-medium">Billing & Invoices</span>
+          </div>
         </Link>
       </nav>
 
@@ -142,6 +203,7 @@ export default function Sidebar() {
         </button>
       </div>
     </aside>
+  </>
   );
 }
 

@@ -1,24 +1,35 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Bell, Search, UserCircle, LogOut, Clock, Users, ChevronDown, ShieldCheck } from 'lucide-react';
+import { Bell, Search, UserCircle, LogOut, Clock, Users, ChevronDown, ShieldCheck, Menu } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import StaffManagementModal from './StaffManagementModal';
 
-export default function Header() {
+export default function Header({ onToggleMobileMenu }: { onToggleMobileMenu?: () => void }) {
   const { currentUser, logout, switchShift, setShowStaffModal } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
 
   return (
     <>
-      <header className="h-16 border-b bg-white flex items-center justify-between px-6 sticky top-0 z-10 ml-64">
-        <div className="flex items-center bg-slate-100 rounded-md px-3 py-1.5 w-96">
-          <Search size={18} className="text-slate-400 mr-2" />
-          <input
-            type="text"
-            placeholder="Search guests, reservations, rooms..."
-            className="bg-transparent border-none outline-none w-full text-sm placeholder:text-slate-500"
-          />
+      <header className="h-16 border-b bg-white flex items-center justify-between px-4 sm:px-6 sticky top-0 z-10">
+        <div className="flex items-center gap-3 flex-1 max-w-md">
+          {onToggleMobileMenu && (
+            <button 
+              onClick={onToggleMobileMenu}
+              className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition"
+              aria-label="Toggle Navigation Menu"
+            >
+              <Menu size={20} />
+            </button>
+          )}
+          <div className="flex items-center bg-slate-100 rounded-xl px-3 py-1.5 w-full">
+            <Search size={18} className="text-slate-400 mr-2 shrink-0" />
+            <input
+              type="text"
+              placeholder="Search guests, rooms, reservations..."
+              className="bg-transparent border-none outline-none w-full text-sm placeholder:text-slate-500"
+            />
+          </div>
         </div>
 
         <div className="flex items-center gap-4">

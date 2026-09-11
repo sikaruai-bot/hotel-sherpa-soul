@@ -72,41 +72,55 @@ export default function Dashboard() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <button 
-            onClick={toggleStopSell}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm ${
-              stopSellActive 
-                ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse' 
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-            }`}
+          <Link 
+            href="/reservations"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-md hover:scale-[1.02]"
           >
-            <ShieldAlert size={16} className={stopSellActive ? 'text-white' : 'text-rose-400'} />
-            {stopSellActive ? 'Stop-Sell ACTIVE (OTAs Locked)' : 'Stop-Sell Controls'}
-          </button>
+            <CalendarDays size={16} /> Open Calendar & Tape-Chart
+          </Link>
 
           <Link 
             href="/reservations/new"
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-md"
+            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-md hover:scale-[1.02]"
           >
             <Plus size={16} /> New Booking
           </Link>
 
           <Link 
             href="/front-desk"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-md"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-md hover:scale-[1.02]"
           >
-            <LogIn size={16} /> Front Desk Desk
+            <LogIn size={16} /> Front Desk
           </Link>
+
+          <button 
+            onClick={toggleStopSell}
+            className={`px-3.5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm ${
+              stopSellActive 
+                ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse' 
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+            }`}
+          >
+            <ShieldAlert size={16} className={stopSellActive ? 'text-white' : 'text-rose-400'} />
+            {stopSellActive ? 'Stop-Sell ACTIVE' : 'Stop-Sell'}
+          </button>
         </div>
       </div>
 
-      {/* Primary KPI Cards */}
+      {/* Primary KPI Cards - Interactive Links */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* Occupancy Card */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition">
+        <Link 
+          href="/rooms"
+          className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md hover:border-blue-300 transition block group cursor-pointer"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Current Occupancy</span>
-            <span className="p-2.5 bg-blue-50 text-blue-600 rounded-xl"><BedDouble size={20} /></span>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-blue-600 transition-colors">
+              Current Occupancy
+            </span>
+            <span className="p-2.5 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
+              <BedDouble size={20} />
+            </span>
           </div>
           <div className="flex items-baseline gap-2 mt-3">
             <span className="text-3xl font-extrabold text-slate-900">{occupancyRate}%</span>
@@ -115,16 +129,26 @@ export default function Dashboard() {
           <div className="w-full bg-slate-100 h-2 rounded-full mt-3 overflow-hidden">
             <div className="bg-blue-600 h-full rounded-full transition-all duration-500" style={{ width: `${occupancyRate}%` }}></div>
           </div>
-          <p className="text-[11px] text-slate-400 mt-2 font-medium">
-            {availableRooms.length} Available • {cleaningRooms.length} Cleaning • {maintenanceRooms.length} Mnt
-          </p>
-        </div>
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-[11px] text-slate-400 font-medium">
+              {availableRooms.length} Avail • {cleaningRooms.length} Cln • {maintenanceRooms.length} Mnt
+            </p>
+            <span className="text-[11px] text-blue-600 font-bold group-hover:underline">Rooms &rarr;</span>
+          </div>
+        </Link>
 
-        {/* Arrivals & Departures */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition">
+        {/* Arrivals & Departures -> Direct Link to Calendar & Bookings */}
+        <Link 
+          href="/reservations"
+          className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md hover:border-emerald-300 transition block group cursor-pointer"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Today's Movement</span>
-            <span className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl"><CalendarDays size={20} /></span>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-emerald-600 transition-colors">
+              Today's Movement
+            </span>
+            <span className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+              <CalendarDays size={20} />
+            </span>
           </div>
           <div className="grid grid-cols-2 gap-2 mt-3">
             <div className="p-2 bg-emerald-50/60 rounded-lg border border-emerald-100">
@@ -136,42 +160,65 @@ export default function Dashboard() {
               <span className="text-2xl font-bold text-orange-900">{todayDepartures.length}</span>
             </div>
           </div>
-          <p className="text-[11px] text-slate-400 mt-2 font-medium">Fast 1-click check-in ready at Front Desk</p>
-        </div>
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-[11px] text-slate-400 font-medium">Click to view in Calendar</p>
+            <span className="text-[11px] text-emerald-600 font-bold group-hover:underline">Calendar &rarr;</span>
+          </div>
+        </Link>
 
-        {/* Revenue Today */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition">
+        {/* Revenue Today -> Direct Link to Billing */}
+        <Link 
+          href="/billing"
+          className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md hover:border-purple-300 transition block group cursor-pointer"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Collected Today</span>
-            <span className="p-2.5 bg-purple-50 text-purple-600 rounded-xl"><DollarSign size={20} /></span>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-purple-600 transition-colors">
+              Collected Today
+            </span>
+            <span className="p-2.5 bg-purple-50 text-purple-600 rounded-xl group-hover:bg-purple-600 group-hover:text-white transition-colors">
+              <DollarSign size={20} />
+            </span>
           </div>
           <div className="mt-3">
             <span className="text-2xl font-extrabold text-slate-900">NPR {todayRevenue.toLocaleString()}</span>
             <p className="text-xs text-emerald-600 font-semibold mt-1 flex items-center gap-0.5">
-              <ArrowUpRight size={14} /> NPR {pendingRevenue.toLocaleString()} pending balance
+              <ArrowUpRight size={14} /> NPR {pendingRevenue.toLocaleString()} pending
             </p>
           </div>
-          <p className="text-[11px] text-slate-400 mt-3 font-medium">eSewa, Khalti, Cards & Cash NPR/USD</p>
-        </div>
+          <div className="flex items-center justify-between mt-3">
+            <p className="text-[11px] text-slate-400 font-medium">eSewa, Khalti, Cash & Card</p>
+            <span className="text-[11px] text-purple-600 font-bold group-hover:underline">Billing &rarr;</span>
+          </div>
+        </Link>
 
-        {/* Specialty Hub (Long Stay & Kitchen) */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition">
+        {/* Specialty Hub -> Link to Long Stay */}
+        <Link 
+          href="/long-stay"
+          className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md hover:border-amber-300 transition block group cursor-pointer"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Specialty Hub</span>
-            <span className="p-2.5 bg-amber-50 text-amber-600 rounded-xl"><ChefHat size={20} /></span>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-amber-600 transition-colors">
+              Specialty Hub
+            </span>
+            <span className="p-2.5 bg-amber-50 text-amber-600 rounded-xl group-hover:bg-amber-600 group-hover:text-white transition-colors">
+              <ChefHat size={20} />
+            </span>
           </div>
           <div className="space-y-2 mt-3 text-xs">
             <div className="flex justify-between items-center text-slate-700">
-              <span>Long Stay Tenants:</span>
+              <span>Long Stay:</span>
               <span className="font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded">{contracts.length} Active</span>
             </div>
             <div className="flex justify-between items-center text-slate-700">
-              <span>Kitchen Users:</span>
-              <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">{kitchenUsers.length} Passes</span>
+              <span>Kitchen Passes:</span>
+              <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">{kitchenUsers.length} Active</span>
             </div>
           </div>
-          <p className="text-[11px] text-slate-400 mt-2 font-medium">Unique Sherpa Soul Long Stay Services</p>
-        </div>
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-[11px] text-slate-400 font-medium">Unique Long Stay Services</p>
+            <span className="text-[11px] text-amber-600 font-bold group-hover:underline">Details &rarr;</span>
+          </div>
+        </Link>
       </div>
 
       {/* Main Grid: Room Status Matrix & Live Operations */}
@@ -213,9 +260,15 @@ export default function Dashboard() {
                 const badge = getStatusBadge();
 
                 return (
-                  <div key={r.id} className={`p-4 rounded-xl border ${badge.bg} transition-all hover:scale-[1.01]`}>
+                  <Link 
+                    href="/reservations" 
+                    key={r.id} 
+                    className={`p-4 rounded-xl border ${badge.bg} transition-all hover:scale-[1.02] hover:shadow-md block cursor-pointer group`}
+                  >
                     <div className="flex justify-between items-start">
-                      <span className="text-xl font-black text-slate-900">Room {r.number}</span>
+                      <span className="text-xl font-black text-slate-900 group-hover:text-blue-600 transition-colors">
+                        Room {r.number}
+                      </span>
                       <span className="flex items-center gap-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full bg-white/80 shadow-2xs">
                         <span className={`w-2 h-2 rounded-full ${badge.dot}`}></span>
                         {badge.label}
@@ -228,10 +281,39 @@ export default function Dashboard() {
                       </span>
                       <span className="font-bold text-slate-800">NPR {r.dailyRate}/d</span>
                     </div>
-                  </div>
+                    <div className="mt-2 text-[10px] text-blue-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 justify-end">
+                      <span>View in Calendar</span> &rarr;
+                    </div>
+                  </Link>
                 );
               })}
             </div>
+          </div>
+
+          {/* Calendar & Tape-Chart Direct Access Card */}
+          <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-2xl p-5 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-blue-800/40">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center shrink-0">
+                <CalendarDays size={26} className="text-blue-300" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-base text-white">Interactive Reservation Calendar & Tape-Chart</h3>
+                  <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] px-2 py-0.5 rounded font-mono font-bold">
+                    6 Rooms Active
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  View room occupancy timeline, month calendar view, and OTA booking synchronizations
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/reservations"
+              className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold px-5 py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-lg shrink-0 hover:scale-105"
+            >
+              <CalendarDays size={16} /> Open Calendar Now &rarr;
+            </Link>
           </div>
 
           {/* Today's Arrival Action Center */}
