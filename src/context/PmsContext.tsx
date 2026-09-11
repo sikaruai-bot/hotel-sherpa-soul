@@ -20,6 +20,23 @@ export interface Room {
   maintenanceNote?: string;
 }
 
+export type GuestIdType = 
+  | 'Passport'
+  | 'Citizenship (नागरिकता)'
+  | 'National ID (राष्ट्रिय परिचयपत्र)'
+  | 'Driving License (सवारी चालक अनुमतिपत्र)'
+  | 'Voter ID (मतदाता परिचयपत्र)'
+  | 'PAN Card (प्यान कार्ड)'
+  | 'Other Official ID';
+
+export type PurposeOfVisitType =
+  | 'Trekking & Mountaineering'
+  | 'Tourism & Holiday'
+  | 'Business & Work'
+  | 'Transit & Stopover'
+  | 'Personal / Family'
+  | 'Other';
+
 export interface Reservation {
   id: string;
   otaReference?: string;
@@ -28,6 +45,21 @@ export interface Reservation {
   phone: string;
   nationality: string;
   passportNumber: string;
+  idType?: GuestIdType;
+  idNumber?: string;
+  idIssuedPlace?: string;
+  gender?: 'Male' | 'Female' | 'Other';
+  dob?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  purposeOfVisit?: PurposeOfVisitType;
+  arrivedFrom?: string;
+  nextDestination?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  vehicleNumber?: string;
+  keyHandedOver?: boolean;
   roomNumber: string;
   roomType: string;
   checkInDate: string;
@@ -169,7 +201,7 @@ interface PmsContextType {
     excludeReservationId?: string
   ) => RoomAvailabilityStatus;
   addReservation: (reservation: Omit<Reservation, 'id' | 'createdAt'>) => { success: boolean; error?: string };
-  checkInGuest: (reservationId: string, passport?: string) => void;
+  checkInGuest: (reservationId: string, detailsOrPassport?: string | Partial<Reservation>) => void;
   checkOutGuest: (reservationId: string, paymentDetails?: { method: Invoice['paymentMethod']; amount: number }) => void;
   updateRoomStatus: (roomNumber: string, status: Room['status'], note?: string) => void;
   addLongStayContract: (contract: Omit<LongStayContract, 'id'>) => void;
@@ -680,17 +712,25 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { success: true };
   };
 
-  const checkInGuest = (reservationId: string, passport?: string) => {
+  const checkInGuest = (reservationId: string, detailsOrPassport?: string | Partial<Reservation>) => {
     let updatedRoomNumber = '';
     let guestName = '';
+    const detailsObj: Partial<Reservation> = typeof detailsOrPassport === 'string'
+      ? { passportNumber: detailsOrPassport }
+      : (detailsOrPassport || {});
+
     const updatedReservations = reservations.map(r => {
       if (r.id === reservationId) {
         updatedRoomNumber = r.roomNumber;
-        guestName = r.guestName;
+        guestName = detailsObj.guestName || r.guestName;
+        const resolvedIdNumber = detailsObj.idNumber || detailsObj.passportNumber || r.idNumber || r.passportNumber;
         return {
           ...r,
+          ...detailsObj,
           status: 'CHECKED_IN' as const,
-          passportNumber: passport || r.passportNumber,
+          passportNumber: resolvedIdNumber,
+          idNumber: resolvedIdNumber,
+          idType: detailsObj.idType || r.idType || 'Passport',
         };
       }
       return r;
@@ -705,11 +745,12 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     setRooms(updatedRooms);
 
+    const idTypeLabel = detailsObj.idType || 'ID Document';
     const updatedNotifs = [
       {
         id: `NOTIF-${Date.now()}`,
-        title: `Guest Checked-In: ${guestName}`,
-        detail: `Room ${updatedRoomNumber} marked as OCCUPIED. Passport registered.`,
+        title: `Guest Arrival Checked-In: ${guestName}`,
+        detail: `Room ${updatedRoomNumber} marked as OCCUPIED. ${idTypeLabel} and arrival registration verified.`,
         timestamp: 'Just now',
         type: 'Booking' as const,
         channel: 'In-App' as const,
@@ -737,7 +778,11 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     fetch(`/api/reservations/${reservationId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'CHECKED_IN', passportNumber: passport }),
+      body: JSON.stringify({ 
+        status: 'CHECKED_IN', 
+        ...detailsObj,
+        passportNumber: detailsObj.idNumber || detailsObj.passportNumber 
+      }),
     }).catch(err => console.warn('Sync check-in error:', err));
   };
 

@@ -104,13 +104,25 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { 
       reservationId, 
+      idType = 'Passport',
+      idNumber,
       passportNumber, 
+      idIssuedPlace,
       nationality, 
       phoneNumber,
+      address,
+      purposeOfVisit = 'Tourism & Holiday',
+      arrivedFrom,
+      nextDestination,
+      emergencyContactName,
+      emergencyContactPhone,
+      vehicleNumber,
       paymentMethod = 'eSewa / Fonepay QR',
       transactionId,
       paidAmountNow,
     } = body;
+
+    const actualIdNumber = (idNumber || passportNumber || '').trim();
 
     if (!reservationId) {
       return NextResponse.json(
@@ -119,9 +131,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!passportNumber || passportNumber.trim().length < 3) {
+    if (!actualIdNumber || actualIdNumber.length < 3) {
       return NextResponse.json(
-        { success: false, error: 'Passport or ID number is required by Nepal tourism regulations.' },
+        { success: false, error: `${idType || 'Passport'} number is required by Nepal tourism regulations.` },
         { status: 400 }
       );
     }
@@ -222,10 +234,14 @@ export async function POST(request: Request) {
     }
 
     // Update guest passport and contact details
+    const formattedId = idType && idType !== 'Passport'
+      ? `[${idType}] ${actualIdNumber}`
+      : actualIdNumber;
+
     await prisma.guest.update({
       where: { id: reservation.guestId },
       data: {
-        passportNumber: passportNumber.trim(),
+        passportNumber: formattedId,
         ...(nationality ? { nationality: nationality.trim() } : {}),
         ...(phoneNumber ? { phoneNumber: phoneNumber.trim() } : {}),
       },
@@ -257,7 +273,7 @@ export async function POST(request: Request) {
     await prisma.notification.create({
       data: {
         title: `💳 Self Check-In & Paid: ${reservation.guest.name}`,
-        detail: `Room ${reservation.room.roomNumber} (${reservation.room.roomType.name}) self-checked in.${paymentNote} ID: ${passportNumber}.`,
+        detail: `Room ${reservation.room.roomNumber} (${reservation.room.roomType.name}) self-checked in.${paymentNote} ID (${idType}): ${actualIdNumber}. Purpose: ${purposeOfVisit}. Contact: ${phoneNumber || 'N/A'}.`,
         type: 'Booking',
         channel: 'In-App',
         status: 'Delivered',
@@ -269,7 +285,16 @@ export async function POST(request: Request) {
       reservationId: reservation.id,
       guestName: reservation.guest.name,
       roomNumber: reservation.room.roomNumber,
-      passportNumber: passportNumber.trim(),
+      idType: idType,
+      idNumber: actualIdNumber,
+      passportNumber: actualIdNumber,
+      idIssuedPlace: idIssuedPlace || '',
+      address: address || '',
+      purposeOfVisit: purposeOfVisit,
+      arrivedFrom: arrivedFrom || '',
+      nextDestination: nextDestination || '',
+      emergencyContactName: emergencyContactName || '',
+      emergencyContactPhone: emergencyContactPhone || '',
       paymentMethod: paymentMethod || 'PREPAID',
       transactionId: transactionId || 'PREPAID_ONLINE',
       amountPaid: currentBalanceDue,
@@ -291,6 +316,10 @@ export async function POST(request: Request) {
         paidAmount: finalPaidAmount,
         totalAmount: reservation.totalAmount,
         paymentStatus: 'PAID & SETTLED',
+        idType: idType,
+        idNumber: actualIdNumber,
+        nationality: nationality || reservation.guest.nationality || 'International',
+        purposeOfVisit: purposeOfVisit,
         wifiNetwork: 'Hotel Sherpa Soul Guest',
         wifiPassword: 'ThamelSleepWell2026',
         kitchenEligible: reservation.room.kitchenEligible,

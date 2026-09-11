@@ -20,7 +20,8 @@ import {
   Compass,
   ArrowRight,
   Receipt,
-  Check
+  Check,
+  User
 } from 'lucide-react';
 
 interface BookingMatch {
@@ -54,6 +55,10 @@ interface CheckInResult {
   paidAmount: number;
   totalAmount: number;
   paymentStatus: string;
+  idType?: string;
+  idNumber?: string;
+  nationality?: string;
+  purposeOfVisit?: string;
   wifiNetwork: string;
   wifiPassword: string;
   kitchenEligible: boolean;
@@ -64,6 +69,15 @@ interface CheckInResult {
   address: string;
 }
 
+export type GuestIdType = 
+  | 'Passport'
+  | 'Citizenship (नागरिकता)'
+  | 'National ID (राष्ट्रिय परिचयपत्र)'
+  | 'Driving License'
+  | 'Voter ID'
+  | 'PAN Card'
+  | 'Other Official ID';
+
 export default function SelfCheckInPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -73,10 +87,19 @@ export default function SelfCheckInPage() {
   // Selected reservation for completing check-in
   const [selectedBooking, setSelectedBooking] = useState<BookingMatch | null>(null);
   
-  // Guest KYC details
-  const [passportNumber, setPassportNumber] = useState('');
+  // Guest KYC details (Nepal Tourism & Police Records)
+  const [idType, setIdType] = useState<GuestIdType>('Passport');
+  const [idNumber, setIdNumber] = useState('');
+  const [idIssuedPlace, setIdIssuedPlace] = useState('');
   const [nationality, setNationality] = useState('International');
   const [guestPhone, setGuestPhone] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
+  const [address, setAddress] = useState('');
+  const [purposeOfVisit, setPurposeOfVisit] = useState('Tourism & Holiday');
+  const [arrivedFrom, setArrivedFrom] = useState('');
+  const [nextDestination, setNextDestination] = useState('');
+  const [emergencyContactName, setEmergencyContactName] = useState('');
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
   const [agreeRules, setAgreeRules] = useState(true);
 
   // Payment details (Mandatory if balanceDue > 0)
@@ -113,7 +136,14 @@ export default function SelfCheckInPage() {
       setMatches(data.data);
       if (data.data.length === 1) {
         setSelectedBooking(data.data[0]);
-        if (data.data[0].guestPhone) setGuestPhone(data.data[0].guestPhone);
+        if (data.data[0].guestPhone) {
+          setGuestPhone(data.data[0].guestPhone);
+          const isNepali = data.data[0].guestPhone.startsWith('+977') || data.data[0].guestPhone.startsWith('98') || data.data[0].guestPhone.startsWith('97');
+          if (isNepali) {
+            setIdType('Citizenship (नागरिकता)');
+            setNationality('Nepali');
+          }
+        }
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to search booking.');
@@ -122,13 +152,14 @@ export default function SelfCheckInPage() {
     }
   };
 
-  // 2. Submit check-in with payment verification
+  // 2. Submit check-in with payment verification and full KYC
   const handleSubmitCheckIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedBooking) return;
 
-    if (!passportNumber.trim() || passportNumber.trim().length < 3) {
-      setErrorMsg('Please enter your Passport or National ID number.');
+    const actualId = idNumber.trim();
+    if (!actualId || actualId.length < 3) {
+      setErrorMsg(`Please enter your valid ${idType} number.`);
       return;
     }
 
@@ -147,9 +178,19 @@ export default function SelfCheckInPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reservationId: selectedBooking.id,
-          passportNumber: passportNumber.trim(),
+          idType,
+          idNumber: actualId,
+          passportNumber: actualId,
+          idIssuedPlace: idIssuedPlace.trim(),
           nationality: nationality.trim(),
           phoneNumber: guestPhone.trim(),
+          email: guestEmail.trim(),
+          address: address.trim(),
+          purposeOfVisit,
+          arrivedFrom: arrivedFrom.trim(),
+          nextDestination: nextDestination.trim(),
+          emergencyContactName: emergencyContactName.trim(),
+          emergencyContactPhone: emergencyContactPhone.trim(),
           paymentMethod: selectedBooking.balanceDue > 0 ? paymentMethod : 'Prepaid Online (OTA)',
           transactionId: selectedBooking.balanceDue > 0 ? transactionId.trim() : 'PREPAID_ONLINE',
           paidAmountNow: selectedBooking.balanceDue,
@@ -278,6 +319,25 @@ export default function SelfCheckInPage() {
                     <span className="text-slate-400">Password:</span>
                     <span className="font-mono font-bold text-amber-300">{checkInDone.wifiPassword}</span>
                   </div>
+                </div>
+              </div>
+
+              {/* Verified Guest Registration Badge */}
+              <div className="mt-3 p-3 bg-slate-950/70 border border-slate-800 rounded-2xl text-xs space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-300 text-[11px]">
+                    <ShieldCheck size={13} className="text-emerald-400" />
+                    <span>Verified Guest ID & Tourism Record:</span>
+                  </div>
+                  <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-800">
+                    Nepal Compliant
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-400 space-y-0.5 pt-0.5">
+                  <p><span className="text-slate-500">Document:</span> <span className="text-white font-mono font-bold">{checkInDone.idType || 'ID'}: {checkInDone.idNumber || 'Recorded'}</span></p>
+                  {checkInDone.purposeOfVisit && (
+                    <p><span className="text-slate-500">Purpose of Visit:</span> <span className="text-slate-300">{checkInDone.purposeOfVisit}</span></p>
+                  )}
                 </div>
               </div>
 
@@ -487,42 +547,182 @@ export default function SelfCheckInPage() {
 
               {/* Form */}
               <form onSubmit={handleSubmitCheckIn} className="space-y-3.5 pt-1">
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1 flex items-center gap-1.5">
-                    <ShieldCheck size={14} className="text-amber-400" />
-                    Passport / Citizenship Number *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. PP12345678 or Citizen ID"
-                    value={passportNumber}
-                    onChange={(e) => setPassportNumber(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400 transition"
-                  />
-                  <p className="text-[10px] text-slate-500 mt-1">Required by Nepal Ministry of Culture, Tourism & Civil Aviation.</p>
+                {/* 1. Official ID Document Details */}
+                <div className="bg-slate-950/90 p-3.5 rounded-2xl border border-slate-800 space-y-3">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400">
+                    <ShieldCheck size={14} />
+                    <span>Official ID Type & Document (परिचयपत्र विवरण) *</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                      Select Guest ID Type (परिचयपत्र प्रकार) *
+                    </label>
+                    <select
+                      value={idType}
+                      onChange={(e) => setIdType(e.target.value as GuestIdType)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-medium"
+                    >
+                      <option value="Passport">Passport (राहदानी / पासपोर्ट - Foreign Tourists)</option>
+                      <option value="Citizenship (नागरिकता)">Citizenship (नागरिकता प्रमाणपत्र - Nepali Citizens)</option>
+                      <option value="National ID (राष्ट्रिय परिचयपत्र)">National ID (राष्ट्रिय परिचयपत्र - NID)</option>
+                      <option value="Driving License">Driving License (सवारी चालक अनुमतिपत्र)</option>
+                      <option value="Voter ID">Voter ID (मतदाता परिचयपत्र)</option>
+                      <option value="PAN Card">PAN Card (स्थायी लेखा नम्बर)</option>
+                      <option value="Other Official ID">Other Official Government ID (अन्य परिचयपत्र)</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                        {idType} Number *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder={
+                          idType === 'Passport' ? 'e.g. PP12345678' :
+                          idType === 'Citizenship (नागरिकता)' ? 'e.g. 27-01-75-01234' :
+                          idType === 'National ID (राष्ट्रिय परिचयपत्र)' ? 'e.g. 123-456-7890' :
+                          'Enter document number'
+                        }
+                        value={idNumber}
+                        onChange={(e) => setIdNumber(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">Issued District / Country</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Kathmandu / Nepal / USA"
+                        value={idIssuedPlace}
+                        onChange={(e) => setIdIssuedPlace(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2.5">
+                {/* 2. Personal & Contact Details */}
+                <div className="bg-slate-950/90 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-blue-400">
+                    <User size={14} />
+                    <span>Guest Contact & Address (सम्पर्क र स्थायी ठेगाना)</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">Nationality</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Nepali, American"
+                        value={nationality}
+                        onChange={(e) => setNationality(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">WhatsApp / Phone *</label>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="+977..."
+                        value={guestPhone}
+                        onChange={(e) => setGuestPhone(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 transition"
+                      />
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">Nationality</label>
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">Permanent Address / City (स्थायी ठेगाना)</label>
                     <input
                       type="text"
-                      placeholder="e.g. Nepali, American"
-                      value={nationality}
-                      onChange={(e) => setNationality(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 transition"
+                      placeholder="e.g. Pokhara-6, Kaski or Thamel, Kathmandu"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 transition"
                     />
                   </div>
+                </div>
+
+                {/* 3. Travel Information (Nepal Tourism Record) */}
+                <div className="bg-slate-950/90 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
+                    <Compass size={14} />
+                    <span>Travel & Stay Info (भ्रमण विवरण)</span>
+                  </div>
+
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">WhatsApp / Phone</label>
-                    <input
-                      type="tel"
-                      placeholder="+977..."
-                      value={guestPhone}
-                      onChange={(e) => setGuestPhone(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 transition"
-                    />
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">Purpose of Visit (भ्रमणको उद्देश्य)</label>
+                    <select
+                      value={purposeOfVisit}
+                      onChange={(e) => setPurposeOfVisit(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                    >
+                      <option value="Tourism & Holiday">Tourism & Holiday (पर्यटन तथा विदा)</option>
+                      <option value="Trekking & Mountaineering">Trekking & Mountaineering (ट्रेकिङ तथा हिमाल आरोहण)</option>
+                      <option value="Business & Work">Business & Work (व्यापार तथा कार्यालय)</option>
+                      <option value="Transit & Stopover">Transit & Stopover (ट्रान्जिट)</option>
+                      <option value="Personal / Family">Personal / Family (व्यक्तिगत तथा पारिवारिक)</option>
+                      <option value="Other">Other (अन्य)</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">Arrived From (कहाँबाट)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Lukla / Airport"
+                        value={arrivedFrom}
+                        onChange={(e) => setArrivedFrom(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">Next Destination (अर्को ठाउँ)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Everest / Chitwan"
+                        value={nextDestination}
+                        onChange={(e) => setNextDestination(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 transition"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Emergency Contact */}
+                <div className="bg-slate-950/90 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-rose-400">
+                    <Phone size={14} />
+                    <span>Emergency Contact (आपतकालीन सम्पर्क)</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">Contact Person Name</label>
+                      <input
+                        type="text"
+                        placeholder="Relative or Guide name"
+                        value={emergencyContactName}
+                        onChange={(e) => setEmergencyContactName(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">Emergency Phone</label>
+                      <input
+                        type="tel"
+                        placeholder="Contact number"
+                        value={emergencyContactPhone}
+                        onChange={(e) => setEmergencyContactPhone(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
                   </div>
                 </div>
 

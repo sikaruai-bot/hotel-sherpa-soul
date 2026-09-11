@@ -15,17 +15,42 @@ import {
   Printer, 
   X,
   UserCheck,
-  QrCode
+  QrCode,
+  MapPin,
+  Compass,
+  Phone,
+  Mail,
+  User,
+  Check,
+  Key
 } from 'lucide-react';
-import { usePms, Reservation } from '@/context/PmsContext';
+import { usePms, Reservation, GuestIdType, PurposeOfVisitType } from '@/context/PmsContext';
 import SelfCheckinQrModal from '@/components/SelfCheckinQrModal';
 
 export default function FrontDeskPage() {
   const { reservations, checkInGuest, checkOutGuest, createInvoice } = usePms();
 
-  // Modals state
+  // Full Check-In Modal State
   const [selectedResForCheckIn, setSelectedResForCheckIn] = useState<Reservation | null>(null);
-  const [passportInput, setPassportInput] = useState('');
+  const [idType, setIdType] = useState<GuestIdType>('Passport');
+  const [idNumber, setIdNumber] = useState('');
+  const [idIssuedPlace, setIdIssuedPlace] = useState('');
+  const [guestFullName, setGuestFullName] = useState('');
+  const [nationality, setNationality] = useState('International');
+  const [guestPhone, setGuestPhone] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
+  const [gender, setGender] = useState<'Male' | 'Female' | 'Other'>('Male');
+  const [address, setAddress] = useState('');
+  const [purposeOfVisit, setPurposeOfVisit] = useState<PurposeOfVisitType>('Trekking & Mountaineering');
+  const [arrivedFrom, setArrivedFrom] = useState('');
+  const [nextDestination, setNextDestination] = useState('');
+  const [emergencyContactName, setEmergencyContactName] = useState('');
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
+  const [vehicleNumber, setVehicleNumber] = useState('');
+  const [keyHandedOver, setKeyHandedOver] = useState(true);
+
+  // Full Details / GRC Modal State
+  const [selectedResForDetails, setSelectedResForDetails] = useState<Reservation | null>(null);
   
   const [selectedResForCheckOut, setSelectedResForCheckOut] = useState<Reservation | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'eSewa' | 'Khalti' | 'Cash NPR' | 'Cash USD' | 'Visa'>('eSewa');
@@ -40,11 +65,49 @@ export default function FrontDeskPage() {
   const arrivals = reservations.filter(r => r.status === 'CONFIRMED' || r.status === 'CHECKED_IN');
   const checkedInList = reservations.filter(r => r.status === 'CHECKED_IN');
 
+  const openCheckInModal = (res: Reservation) => {
+    setSelectedResForCheckIn(res);
+    setGuestFullName(res.guestName || '');
+    const isNepali = res.nationality?.toLowerCase() === 'nepali' || res.nationality?.toLowerCase() === 'nepal';
+    setIdType(res.idType || (isNepali ? 'Citizenship (नागरिकता)' : 'Passport'));
+    setIdNumber(res.idNumber || res.passportNumber || '');
+    setIdIssuedPlace(res.idIssuedPlace || '');
+    setNationality(res.nationality || (isNepali ? 'Nepali' : 'International'));
+    setGuestPhone(res.phone || '');
+    setGuestEmail(res.email || '');
+    setGender(res.gender || 'Male');
+    setAddress(res.address || '');
+    setPurposeOfVisit(res.purposeOfVisit || 'Trekking & Mountaineering');
+    setArrivedFrom(res.arrivedFrom || '');
+    setNextDestination(res.nextDestination || '');
+    setEmergencyContactName(res.emergencyContactName || '');
+    setEmergencyContactPhone(res.emergencyContactPhone || '');
+    setVehicleNumber(res.vehicleNumber || '');
+    setKeyHandedOver(res.keyHandedOver !== undefined ? res.keyHandedOver : true);
+  };
+
   const handleConfirmCheckIn = () => {
     if (!selectedResForCheckIn) return;
-    checkInGuest(selectedResForCheckIn.id, passportInput || selectedResForCheckIn.passportNumber);
+    checkInGuest(selectedResForCheckIn.id, {
+      guestName: guestFullName || selectedResForCheckIn.guestName,
+      idType,
+      idNumber: idNumber || selectedResForCheckIn.passportNumber,
+      passportNumber: idNumber || selectedResForCheckIn.passportNumber,
+      idIssuedPlace,
+      nationality,
+      phone: guestPhone,
+      email: guestEmail,
+      gender,
+      address,
+      purposeOfVisit,
+      arrivedFrom,
+      nextDestination,
+      emergencyContactName,
+      emergencyContactPhone,
+      vehicleNumber,
+      keyHandedOver,
+    });
     setSelectedResForCheckIn(null);
-    setPassportInput('');
   };
 
   const handleConfirmCheckOut = () => {
@@ -146,36 +209,38 @@ export default function FrontDeskPage() {
                     </span>
                   </div>
 
-                  <div className="text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex justify-between items-center">
+                  <div className="text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex flex-wrap justify-between items-center gap-2">
                     <span className="text-slate-600">
                       Stay: <strong className="text-slate-800">{res.checkInDate} to {res.checkOutDate}</strong>
                     </span>
                     <span className="text-slate-600">
-                      Passport: <strong className={res.passportNumber ? 'text-emerald-700 font-mono' : 'text-rose-600'}>{res.passportNumber || 'Not Registered'}</strong>
+                      ID ({res.idType || 'Document'}): <strong className={res.idNumber || res.passportNumber ? 'text-emerald-700 font-mono font-bold' : 'text-rose-600'}>{res.idNumber || res.passportNumber || 'Not Registered'}</strong>
                     </span>
                   </div>
 
                   <div className="flex gap-2">
                     {res.status !== 'CHECKED_IN' ? (
                       <button 
-                        onClick={() => {
-                          setSelectedResForCheckIn(res);
-                          setPassportInput(res.passportNumber || '');
-                        }}
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm"
+                        onClick={() => openCheckInModal(res)}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm hover:scale-[1.01]"
                       >
-                        <CheckCircle size={15} /> Check-In Guest
+                        <CheckCircle size={15} /> Arrival Check-In (Full Info)
                       </button>
                     ) : (
-                      <button 
-                        onClick={() => {
-                          setSelectedResForCheckIn(res);
-                          setPassportInput(res.passportNumber || '');
-                        }}
-                        className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
-                      >
-                        <FileText size={15} /> Edit Passport / Details
-                      </button>
+                      <div className="flex gap-2 w-full">
+                        <button 
+                          onClick={() => openCheckInModal(res)}
+                          className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
+                        >
+                          <FileText size={15} /> Edit Guest Info
+                        </button>
+                        <button 
+                          onClick={() => setSelectedResForDetails(res)}
+                          className="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
+                        >
+                          <Printer size={15} /> View / Print GRC
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -242,53 +307,454 @@ export default function FrontDeskPage() {
 
       </div>
 
-      {/* Check-In Modal */}
+      {/* Comprehensive Arrival Check-In & Police Registration Modal */}
       {selectedResForCheckIn && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-scale-in">
-            <div className="flex justify-between items-center border-b pb-3">
-              <h3 className="font-bold text-lg text-slate-900">Check-In: {selectedResForCheckIn.guestName}</h3>
-              <button onClick={() => setSelectedResForCheckIn(null)} className="text-slate-400 hover:text-slate-600">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 space-y-5 shadow-2xl animate-scale-in my-auto max-h-[92vh] flex flex-col border border-slate-200">
+            {/* Header */}
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                  <UserCheck size={22} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-slate-900 leading-tight">Guest Arrival Registration (GRC)</h3>
+                  <p className="text-xs text-slate-500">Official Nepal Police & Hotel Sherpa Soul Check-in Folio</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedResForCheckIn(null)} 
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg transition"
+              >
                 <X size={20} />
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-blue-900">
-                <p><strong>Room Assigned:</strong> Room {selectedResForCheckIn.roomNumber} ({selectedResForCheckIn.roomType})</p>
-                <p><strong>Dates:</strong> {selectedResForCheckIn.checkInDate} to {selectedResForCheckIn.checkOutDate}</p>
-                <p><strong>Source:</strong> {selectedResForCheckIn.source}</p>
+            {/* Scrollable Form Body */}
+            <div className="space-y-4 text-xs overflow-y-auto pr-1 flex-1">
+              {/* Room Stay Summary Banner */}
+              <div className="bg-gradient-to-r from-blue-900 to-indigo-950 p-3.5 rounded-2xl text-white flex flex-wrap items-center justify-between gap-2 shadow-sm">
+                <div>
+                  <span className="text-[10px] text-blue-300 uppercase tracking-wider font-bold block">Assigned Room</span>
+                  <p className="text-sm font-black">Room {selectedResForCheckIn.roomNumber} ({selectedResForCheckIn.roomType})</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-blue-300 uppercase tracking-wider font-bold block">Stay Duration</span>
+                  <p className="font-medium text-xs text-white">{selectedResForCheckIn.checkInDate} &rarr; {selectedResForCheckIn.checkOutDate}</p>
+                </div>
+                <div className="text-right border-l border-white/20 pl-3">
+                  <span className="text-[10px] text-emerald-300 uppercase tracking-wider font-bold block">Source / Channel</span>
+                  <p className="font-bold text-xs text-emerald-400">{selectedResForCheckIn.source}</p>
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-700">Passport Number / Citizen ID *</label>
-                <input 
-                  type="text" 
-                  value={passportInput}
-                  onChange={e => setPassportInput(e.target.value)}
-                  placeholder="Enter passport number for Nepal Tourist Registry"
-                  className="w-full p-2.5 border rounded-xl outline-none focus:border-blue-600 text-sm font-mono"
-                />
+              {/* 1. Official Identification Document (ID Type Dropdown) */}
+              <div className="p-4 bg-amber-50/70 border border-amber-200/80 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-amber-950 text-xs flex items-center gap-1.5">
+                    <ShieldCheck size={16} className="text-amber-600" />
+                    <span>Official Identification (ID Document) *</span>
+                  </h4>
+                  <span className="text-[10px] bg-amber-200/70 text-amber-900 font-bold px-2 py-0.5 rounded-full">
+                    Nepal Law Compliant
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* ID Type Dropdown */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      ID Type (प्रमाणपत्र प्रकार) *
+                    </label>
+                    <select
+                      value={idType}
+                      onChange={(e) => setIdType(e.target.value as GuestIdType)}
+                      className="w-full p-2.5 bg-white border border-amber-300 rounded-xl outline-none font-bold text-slate-800 text-xs focus:ring-2 focus:ring-amber-400"
+                    >
+                      <option value="Passport">Passport (पासपोर्ट)</option>
+                      <option value="Citizenship (नागरिकता)">Citizenship (नागरिकता)</option>
+                      <option value="National ID (राष्ट्रिय परिचयपत्र)">National ID (राष्ट्रिय परिचयपत्र)</option>
+                      <option value="Driving License (सवारी चालक अनुमतिपत्र)">Driving License (सवारी चालक अनुमतिपत्र)</option>
+                      <option value="Voter ID (मतदाता परिचयपत्र)">Voter ID (मतदाता परिचयपत्र)</option>
+                      <option value="PAN Card (प्यान कार्ड)">PAN Card (प्यान कार्ड)</option>
+                      <option value="Other Official ID">Other Official ID (अन्य)</option>
+                    </select>
+                  </div>
+
+                  {/* ID / Document Number */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      ID / Document Number *
+                    </label>
+                    <input 
+                      type="text" 
+                      value={idNumber}
+                      onChange={e => setIdNumber(e.target.value)}
+                      placeholder={
+                        idType === 'Passport' ? 'e.g. PP9821049' :
+                        idType.includes('Citizenship') ? 'e.g. 27-01-78-01234' :
+                        idType.includes('National ID') ? 'e.g. 10-digit NID' :
+                        'Enter document number'
+                      }
+                      className="w-full p-2.5 bg-white border border-amber-300 rounded-xl outline-none font-mono font-bold text-slate-900 text-xs focus:ring-2 focus:ring-amber-400"
+                    />
+                  </div>
+
+                  {/* Issued Place / Country / District */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Issued Place / Country
+                    </label>
+                    <input 
+                      type="text" 
+                      value={idIssuedPlace}
+                      onChange={e => setIdIssuedPlace(e.target.value)}
+                      placeholder="e.g. Kathmandu / Solukhumbu / USA"
+                      className="w-full p-2.5 bg-white border border-amber-300 rounded-xl outline-none text-slate-800 text-xs focus:ring-2 focus:ring-amber-400"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="p-3 bg-emerald-50 rounded-xl text-emerald-800 text-[11px] flex items-center gap-2">
-                <ShieldCheck size={18} />
-                <span>Room key handed over. Keycard verified.</span>
+              {/* 2. Guest Personal & Contact Details */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                <h4 className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                  <User size={15} className="text-blue-600" />
+                  <span>Guest Personal Profile & Contacts</span>
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Guest Full Name *</label>
+                    <input 
+                      type="text" 
+                      value={guestFullName}
+                      onChange={e => setGuestFullName(e.target.value)}
+                      placeholder="Full Name as per ID"
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-xl outline-none font-bold text-slate-900 text-xs focus:border-blue-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Nationality *</label>
+                    <input 
+                      type="text" 
+                      value={nationality}
+                      onChange={e => setNationality(e.target.value)}
+                      placeholder="e.g. Nepali, American, German"
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-xl outline-none font-medium text-slate-900 text-xs focus:border-blue-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Phone / WhatsApp Number *</label>
+                    <input 
+                      type="tel" 
+                      value={guestPhone}
+                      onChange={e => setGuestPhone(e.target.value)}
+                      placeholder="+977... or WhatsApp"
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-xl outline-none font-medium text-slate-900 text-xs focus:border-blue-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Email Address</label>
+                    <input 
+                      type="email" 
+                      value={guestEmail}
+                      onChange={e => setGuestEmail(e.target.value)}
+                      placeholder="guest@example.com"
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-xl outline-none font-medium text-slate-900 text-xs focus:border-blue-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Gender</label>
+                    <select
+                      value={gender}
+                      onChange={e => setGender(e.target.value as any)}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-xl outline-none font-medium text-slate-900 text-xs focus:border-blue-600"
+                    >
+                      <option value="Male">Male (पुरुष)</option>
+                      <option value="Female">Female (महिला)</option>
+                      <option value="Other">Other (अन्य)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Permanent Home Address</label>
+                    <input 
+                      type="text" 
+                      value={address}
+                      onChange={e => setAddress(e.target.value)}
+                      placeholder="Street, City, State / Country"
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-xl outline-none font-medium text-slate-900 text-xs focus:border-blue-600"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Journey Details & Purpose of Visit (नेपाल पर्यटन तथा अध्यागमन विवरण) */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                <h4 className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                  <Compass size={15} className="text-emerald-600" />
+                  <span>Travel Record & Nepal Tourism Registration</span>
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Purpose of Visit (भ्रमणको उद्देश्य)</label>
+                    <select
+                      value={purposeOfVisit}
+                      onChange={e => setPurposeOfVisit(e.target.value as PurposeOfVisitType)}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-xl outline-none font-medium text-slate-900 text-xs focus:border-blue-600"
+                    >
+                      <option value="Trekking & Mountaineering">Trekking & Mountaineering (ट्रेकिङ)</option>
+                      <option value="Tourism & Holiday">Tourism & Holiday (पर्यटन)</option>
+                      <option value="Business & Work">Business & Work (व्यापार)</option>
+                      <option value="Transit & Stopover">Transit & Stopover (ट्रान्जिट)</option>
+                      <option value="Personal / Family">Personal / Family (व्यक्तिगत)</option>
+                      <option value="Other">Other (अन्य)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Arrived From (कहाँबाट आएको)</label>
+                    <input 
+                      type="text" 
+                      value={arrivedFrom}
+                      onChange={e => setArrivedFrom(e.target.value)}
+                      placeholder="e.g. Lukla / TIA Airport / Pokhara"
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-xl outline-none font-medium text-slate-900 text-xs focus:border-blue-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Next Destination (अर्को गन्तव्य)</label>
+                    <input 
+                      type="text" 
+                      value={nextDestination}
+                      onChange={e => setNextDestination(e.target.value)}
+                      placeholder="e.g. Everest Base Camp / Chitwan"
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-xl outline-none font-medium text-slate-900 text-xs focus:border-blue-600"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Emergency Contact & Key Handover */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                <h4 className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                  <Phone size={15} className="text-rose-600" />
+                  <span>Emergency Contact & Hotel Key Handover</span>
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Emergency Contact Person</label>
+                    <input 
+                      type="text" 
+                      value={emergencyContactName}
+                      onChange={e => setEmergencyContactName(e.target.value)}
+                      placeholder="Name of relative / guide / friend"
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-xl outline-none font-medium text-slate-900 text-xs focus:border-blue-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Emergency Phone Number</label>
+                    <input 
+                      type="tel" 
+                      value={emergencyContactPhone}
+                      onChange={e => setEmergencyContactPhone(e.target.value)}
+                      placeholder="Contact telephone"
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-xl outline-none font-medium text-slate-900 text-xs focus:border-blue-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Vehicle / Bike No. (Optional)</label>
+                    <input 
+                      type="text" 
+                      value={vehicleNumber}
+                      onChange={e => setVehicleNumber(e.target.value)}
+                      placeholder="e.g. Ba 2 Pa 4512"
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-xl outline-none font-medium text-slate-900 text-xs focus:border-blue-600"
+                    />
+                  </div>
+                </div>
+
+                {/* Handover Checkbox */}
+                <div className="pt-2 border-t border-slate-200/80 flex items-center gap-2">
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                    <input
+                      type="checkbox"
+                      checked={keyHandedOver}
+                      onChange={(e) => setKeyHandedOver(e.target.checked)}
+                      className="w-4 h-4 rounded accent-blue-600"
+                    />
+                    <Key size={14} className="text-amber-500" />
+                    <span>Physical Key or Keycard successfully handed over to guest</span>
+                  </label>
+                </div>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-2">
+            {/* Modal Actions */}
+            <div className="flex justify-between items-center pt-3 border-t border-slate-100 shrink-0">
               <button 
                 onClick={() => setSelectedResForCheckIn(null)}
-                className="px-4 py-2 border rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50"
+                className="px-4 py-2.5 border rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleConfirmCheckIn}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5"
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 flex items-center gap-2 hover:scale-[1.01] transition"
               >
-                <CheckCircle size={15} /> Complete Check-In
+                <CheckCircle size={16} /> Complete Arrival Check-In & Issue Key
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Official Guest Registration Card (GRC) View / Print Modal */}
+      {selectedResForDetails && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-scale-in my-auto max-h-[92vh] overflow-y-auto border border-slate-200 text-slate-900">
+            {/* GRC Printable Header */}
+            <div className="flex justify-between items-start border-b border-slate-200 pb-4">
+              <div>
+                <div className="flex items-center gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain" />
+                  <div>
+                    <h2 className="text-lg font-black text-slate-900 tracking-tight">HOTEL SHERPA SOUL</h2>
+                    <p className="text-[11px] text-amber-700 font-bold font-mono">PAN: 119205419</p>
+                    <p className="text-[10px] text-slate-500">Bhagawati Marg-26, Thamel, Kathmandu, Nepal</p>
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="bg-blue-100 text-blue-800 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                  Guest Registration Card (GRC)
+                </span>
+                <p className="text-[11px] text-slate-500 mt-1 font-mono">Ref: {selectedResForDetails.otaReference || selectedResForDetails.id}</p>
+              </div>
+            </div>
+
+            {/* Room & Stay Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs">
+              <div>
+                <span className="text-slate-400 font-bold text-[10px] uppercase block">Room Assigned</span>
+                <span className="text-base font-black text-blue-700">Room {selectedResForDetails.roomNumber}</span>
+                <p className="text-[11px] text-slate-600">{selectedResForDetails.roomType}</p>
+              </div>
+              <div>
+                <span className="text-slate-400 font-bold text-[10px] uppercase block">Arrival Date</span>
+                <span className="font-bold text-slate-900">{selectedResForDetails.checkInDate}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 font-bold text-[10px] uppercase block">Departure Date</span>
+                <span className="font-bold text-slate-900">{selectedResForDetails.checkOutDate}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 font-bold text-[10px] uppercase block">Guests</span>
+                <span className="font-bold text-slate-900">{selectedResForDetails.adults} Adults {selectedResForDetails.children ? `, ${selectedResForDetails.children} Ch` : ''}</span>
+              </div>
+            </div>
+
+            {/* Guest Identity & Contact Details */}
+            <div className="space-y-3 text-xs">
+              <h4 className="font-black text-slate-800 uppercase tracking-wider text-[11px] border-b pb-1">
+                Guest Identification & Police Record
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 bg-white border border-slate-100 p-3 rounded-xl">
+                <div><span className="text-slate-500">Full Name:</span> <strong className="text-slate-900">{selectedResForDetails.guestName}</strong></div>
+                <div><span className="text-slate-500">Nationality:</span> <strong className="text-slate-900">{selectedResForDetails.nationality || 'International'}</strong></div>
+                <div><span className="text-slate-500">ID Document Type:</span> <strong className="text-blue-700">{selectedResForDetails.idType || 'Passport'}</strong></div>
+                <div><span className="text-slate-500">ID / Passport Number:</span> <strong className="font-mono text-emerald-700 font-bold">{selectedResForDetails.idNumber || selectedResForDetails.passportNumber || 'Not Specified'}</strong></div>
+                <div><span className="text-slate-500">Issued Place / District:</span> <span>{selectedResForDetails.idIssuedPlace || '—'}</span></div>
+                <div><span className="text-slate-500">Gender:</span> <span>{selectedResForDetails.gender || '—'}</span></div>
+                <div><span className="text-slate-500">Phone / WhatsApp:</span> <strong>{selectedResForDetails.phone || '—'}</strong></div>
+                <div><span className="text-slate-500">Email:</span> <span>{selectedResForDetails.email || '—'}</span></div>
+                <div className="sm:col-span-2"><span className="text-slate-500">Permanent Address:</span> <span>{selectedResForDetails.address || '—'}</span></div>
+              </div>
+            </div>
+
+            {/* Journey & Travel Record */}
+            <div className="space-y-3 text-xs">
+              <h4 className="font-black text-slate-800 uppercase tracking-wider text-[11px] border-b pb-1">
+                Nepal Tourism & Travel Itinerary
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <div>
+                  <span className="text-slate-500 block text-[10px]">Purpose of Visit</span>
+                  <strong className="text-slate-900">{selectedResForDetails.purposeOfVisit || 'Tourism & Holiday'}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px]">Arrived From</span>
+                  <span className="text-slate-800 font-medium">{selectedResForDetails.arrivedFrom || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px]">Next Destination</span>
+                  <span className="text-slate-800 font-medium">{selectedResForDetails.nextDestination || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px]">Emergency Contact</span>
+                  <span className="text-slate-800 font-medium">{selectedResForDetails.emergencyContactName || '—'} ({selectedResForDetails.emergencyContactPhone || '—'})</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px]">Vehicle / Bike No.</span>
+                  <span className="text-slate-800 font-mono">{selectedResForDetails.vehicleNumber || 'None'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px]">Key Handover Status</span>
+                  <span className="text-emerald-700 font-bold">✓ Keycard Issued</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Billing Overview */}
+            <div className="flex justify-between items-center bg-blue-50/70 p-3.5 rounded-2xl border border-blue-200 text-xs">
+              <div>
+                <span className="text-slate-500 block">Total Stay Folio</span>
+                <span className="text-base font-black text-slate-900">NPR {selectedResForDetails.totalAmount.toLocaleString()}</span>
+              </div>
+              <div className="text-right">
+                <span className="text-slate-500 block">Settled Amount</span>
+                <span className="text-base font-black text-emerald-600">NPR {selectedResForDetails.paidAmount.toLocaleString()}</span>
+              </div>
+            </div>
+
+            {/* Signature Area */}
+            <div className="grid grid-cols-2 gap-8 pt-6 border-t border-dashed border-slate-300 text-xs text-center">
+              <div>
+                <div className="border-b border-slate-400 h-10 w-3/4 mx-auto mb-1"></div>
+                <p className="font-bold text-slate-700">Guest Signature</p>
+                <p className="text-[10px] text-slate-400">I agree to hotel regulations & quiet hours</p>
+              </div>
+              <div>
+                <div className="border-b border-slate-400 h-10 w-3/4 mx-auto mb-1"></div>
+                <p className="font-bold text-slate-700">Receptionist / Front Desk Officer</p>
+                <p className="text-[10px] text-slate-400">Hotel Sherpa Soul Staff Seal</p>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex justify-between items-center pt-2">
+              <button
+                onClick={() => setSelectedResForDetails(null)}
+                className="px-4 py-2 border rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5"
+              >
+                <Printer size={15} /> Print Registration Card (GRC)
               </button>
             </div>
           </div>
