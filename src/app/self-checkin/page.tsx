@@ -21,7 +21,10 @@ import {
   ArrowRight,
   Receipt,
   Check,
-  User
+  User,
+  Users,
+  Plus,
+  Minus
 } from 'lucide-react';
 
 interface BookingMatch {
@@ -59,6 +62,10 @@ interface CheckInResult {
   idNumber?: string;
   nationality?: string;
   purposeOfVisit?: string;
+  maleGuests?: number;
+  femaleGuests?: number;
+  childGuests?: number;
+  accompanyingGuests?: string;
   wifiNetwork: string;
   wifiPassword: string;
   kitchenEligible: boolean;
@@ -94,6 +101,10 @@ export default function SelfCheckInPage() {
   const [nationality, setNationality] = useState('International');
   const [guestPhone, setGuestPhone] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
+  const [maleGuests, setMaleGuests] = useState(1);
+  const [femaleGuests, setFemaleGuests] = useState(0);
+  const [childGuests, setChildGuests] = useState(0);
+  const [accompanyingGuests, setAccompanyingGuests] = useState('');
   const [address, setAddress] = useState('');
   const [purposeOfVisit, setPurposeOfVisit] = useState('Tourism & Holiday');
   const [arrivedFrom, setArrivedFrom] = useState('');
@@ -136,6 +147,11 @@ export default function SelfCheckInPage() {
       setMatches(data.data);
       if (data.data.length === 1) {
         setSelectedBooking(data.data[0]);
+        if (data.data[0].adults) {
+          setMaleGuests(data.data[0].adults);
+          setFemaleGuests(0);
+          setChildGuests(0);
+        }
         if (data.data[0].guestPhone) {
           setGuestPhone(data.data[0].guestPhone);
           const isNepali = data.data[0].guestPhone.startsWith('+977') || data.data[0].guestPhone.startsWith('98') || data.data[0].guestPhone.startsWith('97');
@@ -185,6 +201,12 @@ export default function SelfCheckInPage() {
           nationality: nationality.trim(),
           phoneNumber: guestPhone.trim(),
           email: guestEmail.trim(),
+          maleGuests,
+          femaleGuests,
+          childGuests,
+          adults: (maleGuests + femaleGuests) > 0 ? (maleGuests + femaleGuests) : 1,
+          children: childGuests,
+          accompanyingGuests: accompanyingGuests.trim(),
           address: address.trim(),
           purposeOfVisit,
           arrivedFrom: arrivedFrom.trim(),
@@ -335,6 +357,21 @@ export default function SelfCheckInPage() {
                 </div>
                 <div className="text-[11px] text-slate-400 space-y-0.5 pt-0.5">
                   <p><span className="text-slate-500">Document:</span> <span className="text-white font-mono font-bold">{checkInDone.idType || 'ID'}: {checkInDone.idNumber || 'Recorded'}</span></p>
+                  {((checkInDone.maleGuests || 0) + (checkInDone.femaleGuests || 0) + (checkInDone.childGuests || 0) > 0) && (
+                    <p>
+                      <span className="text-slate-500">Guests:</span>{' '}
+                      <span className="text-white font-medium">
+                        {(checkInDone.maleGuests || 0) + (checkInDone.femaleGuests || 0) + (checkInDone.childGuests || 0)} Total
+                        {' '}({checkInDone.maleGuests || 0} Male, {checkInDone.femaleGuests || 0} Female, {checkInDone.childGuests || 0} Child)
+                      </span>
+                    </p>
+                  )}
+                  {checkInDone.accompanyingGuests && (
+                    <p>
+                      <span className="text-slate-500">Accompanying:</span>{' '}
+                      <span className="text-amber-300 font-medium">{checkInDone.accompanyingGuests}</span>
+                    </p>
+                  )}
                   {checkInDone.purposeOfVisit && (
                     <p><span className="text-slate-500">Purpose of Visit:</span> <span className="text-slate-300">{checkInDone.purposeOfVisit}</span></p>
                   )}
@@ -648,6 +685,103 @@ export default function SelfCheckInPage() {
                   </div>
                 </div>
 
+                {/* 3. Guest Count Breakdown (पाहुना संख्या विवरण) */}
+                <div className="bg-slate-950/90 p-3.5 rounded-2xl border border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400">
+                      <Users size={14} />
+                      <span>Number of Guests (पाहुना संख्या विवरण) *</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded-full">
+                      Total: {maleGuests + femaleGuests + childGuests} Guest{maleGuests + femaleGuests + childGuests > 1 ? 's' : ''}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* Male */}
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-center">
+                      <span className="block text-[11px] font-bold text-slate-300">Male (पुरुष)</span>
+                      <span className="block text-[9px] text-slate-500 mb-1.5">Adult 12y+</span>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setMaleGuests(Math.max(0, maleGuests - 1))}
+                          className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center transition"
+                        >
+                          <Minus size={12} />
+                        </button>
+                        <span className="text-sm font-black text-white w-5 text-center">{maleGuests}</span>
+                        <button
+                          type="button"
+                          onClick={() => setMaleGuests(maleGuests + 1)}
+                          className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center transition"
+                        >
+                          <Plus size={12} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Female */}
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-center">
+                      <span className="block text-[11px] font-bold text-slate-300">Female (महिला)</span>
+                      <span className="block text-[9px] text-slate-500 mb-1.5">Adult 12y+</span>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setFemaleGuests(Math.max(0, femaleGuests - 1))}
+                          className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center transition"
+                        >
+                          <Minus size={12} />
+                        </button>
+                        <span className="text-sm font-black text-white w-5 text-center">{femaleGuests}</span>
+                        <button
+                          type="button"
+                          onClick={() => setFemaleGuests(femaleGuests + 1)}
+                          className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center transition"
+                        >
+                          <Plus size={12} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Child */}
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-center">
+                      <span className="block text-[11px] font-bold text-slate-300">Child (बालबालिका)</span>
+                      <span className="block text-[9px] text-slate-500 mb-1.5">&lt; 12y</span>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setChildGuests(Math.max(0, childGuests - 1))}
+                          className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center transition"
+                        >
+                          <Minus size={12} />
+                        </button>
+                        <span className="text-sm font-black text-white w-5 text-center">{childGuests}</span>
+                        <button
+                          type="button"
+                          onClick={() => setChildGuests(childGuests + 1)}
+                          className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center transition"
+                        >
+                          <Plus size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                      Accompanying Guests Names & Details (साथी पाहुनाहरूको नाम / विवरण)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Maya Sherpa (Wife), Mingma Sherpa (Child)"
+                      value={accompanyingGuests}
+                      onChange={(e) => setAccompanyingGuests(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 transition"
+                    />
+                  </div>
+                </div>
+
                 {/* 3. Travel Information (Nepal Tourism Record) */}
                 <div className="bg-slate-950/90 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
@@ -830,6 +964,11 @@ export default function SelfCheckInPage() {
                       key={b.id}
                       onClick={() => {
                         setSelectedBooking(b);
+                        if (b.adults) {
+                          setMaleGuests(b.adults);
+                          setFemaleGuests(0);
+                          setChildGuests(0);
+                        }
                         if (b.guestPhone) setGuestPhone(b.guestPhone);
                       }}
                       className="p-3 bg-slate-950 hover:bg-slate-800/80 border border-slate-800 rounded-xl cursor-pointer transition flex items-center justify-between"

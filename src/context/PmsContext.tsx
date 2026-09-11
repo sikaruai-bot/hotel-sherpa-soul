@@ -66,6 +66,10 @@ export interface Reservation {
   checkOutDate: string;
   adults: number;
   children: number;
+  maleGuests?: number;
+  femaleGuests?: number;
+  childGuests?: number;
+  accompanyingGuests?: string;
   totalAmount: number;
   paidAmount: number;
   status: 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED';
@@ -724,9 +728,20 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updatedRoomNumber = r.roomNumber;
         guestName = detailsObj.guestName || r.guestName;
         const resolvedIdNumber = detailsObj.idNumber || detailsObj.passportNumber || r.idNumber || r.passportNumber;
+        const resolvedMale = detailsObj.maleGuests !== undefined ? Number(detailsObj.maleGuests) : (r.maleGuests ?? (r.adults > 0 ? 1 : 0));
+        const resolvedFemale = detailsObj.femaleGuests !== undefined ? Number(detailsObj.femaleGuests) : (r.femaleGuests ?? Math.max(0, (r.adults || 1) - resolvedMale));
+        const resolvedChild = detailsObj.childGuests !== undefined ? Number(detailsObj.childGuests) : (r.childGuests ?? (r.children || 0));
+        const computedAdults = (resolvedMale + resolvedFemale) > 0 ? (resolvedMale + resolvedFemale) : (r.adults || 1);
+
         return {
           ...r,
           ...detailsObj,
+          maleGuests: resolvedMale,
+          femaleGuests: resolvedFemale,
+          childGuests: resolvedChild,
+          adults: computedAdults,
+          children: resolvedChild,
+          accompanyingGuests: detailsObj.accompanyingGuests !== undefined ? detailsObj.accompanyingGuests : r.accompanyingGuests,
           status: 'CHECKED_IN' as const,
           passportNumber: resolvedIdNumber,
           idNumber: resolvedIdNumber,

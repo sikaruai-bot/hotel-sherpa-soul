@@ -111,6 +111,10 @@ export async function POST(request: Request) {
       nationality, 
       phoneNumber,
       address,
+      maleGuests = 1,
+      femaleGuests = 0,
+      childGuests = 0,
+      accompanyingGuests,
       purposeOfVisit = 'Tourism & Holiday',
       arrivedFrom,
       nextDestination,
@@ -247,12 +251,21 @@ export async function POST(request: Request) {
       },
     });
 
-    // Update reservation to CHECKED_IN and update paidAmount
+    // Calculate synchronized adults and children
+    const parsedMale = Math.max(0, Number(maleGuests) || 0);
+    const parsedFemale = Math.max(0, Number(femaleGuests) || 0);
+    const parsedChild = Math.max(0, Number(childGuests) || 0);
+    const calculatedAdults = Math.max(1, parsedMale + parsedFemale);
+    const calculatedChildren = parsedChild;
+
+    // Update reservation to CHECKED_IN and update paidAmount and guest counts
     await prisma.reservation.update({
       where: { id: reservationId },
       data: {
         status: ReservationStatus.CHECKED_IN,
         paidAmount: finalPaidAmount,
+        adults: calculatedAdults,
+        children: calculatedChildren,
       },
     });
 
@@ -265,15 +278,18 @@ export async function POST(request: Request) {
       },
     });
 
-    // Staff in-app notification with payment highlight
+    // Staff in-app notification with payment highlight & guest breakdown
     const paymentNote = paymentSuccess 
       ? ` Paid NPR ${currentBalanceDue.toLocaleString()} via ${paymentMethod} (Txn: ${transactionId}).`
       : ' (Prepaid booking).';
 
+    const totalGuestsCount = parsedMale + parsedFemale + parsedChild;
+    const guestsBreakdownText = `Guests: ${totalGuestsCount} (${parsedMale} Male, ${parsedFemale} Female, ${parsedChild} Child)${accompanyingGuests ? ` [With: ${accompanyingGuests}]` : ''}`;
+
     await prisma.notification.create({
       data: {
         title: `💳 Self Check-In & Paid: ${reservation.guest.name}`,
-        detail: `Room ${reservation.room.roomNumber} (${reservation.room.roomType.name}) self-checked in.${paymentNote} ID (${idType}): ${actualIdNumber}. Purpose: ${purposeOfVisit}. Contact: ${phoneNumber || 'N/A'}.`,
+        detail: `Room ${reservation.room.roomNumber} (${reservation.room.roomType.name}) self-checked in. ${guestsBreakdownText}.${paymentNote} ID (${idType}): ${actualIdNumber}. Purpose: ${purposeOfVisit}. Contact: ${phoneNumber || 'N/A'}.`,
         type: 'Booking',
         channel: 'In-App',
         status: 'Delivered',
@@ -288,6 +304,10 @@ export async function POST(request: Request) {
       idType: idType,
       idNumber: actualIdNumber,
       passportNumber: actualIdNumber,
+      maleGuests: parsedMale,
+      femaleGuests: parsedFemale,
+      childGuests: parsedChild,
+      accompanyingGuests: accompanyingGuests || '',
       idIssuedPlace: idIssuedPlace || '',
       address: address || '',
       purposeOfVisit: purposeOfVisit,
@@ -318,6 +338,10 @@ export async function POST(request: Request) {
         paymentStatus: 'PAID & SETTLED',
         idType: idType,
         idNumber: actualIdNumber,
+        maleGuests: parsedMale,
+        femaleGuests: parsedFemale,
+        childGuests: parsedChild,
+        accompanyingGuests: accompanyingGuests || '',
         nationality: nationality || reservation.guest.nationality || 'International',
         purposeOfVisit: purposeOfVisit,
         wifiNetwork: 'Hotel Sherpa Soul Guest',
