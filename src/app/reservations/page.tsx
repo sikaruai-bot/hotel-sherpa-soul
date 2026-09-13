@@ -232,6 +232,31 @@ export default function ReservationsPage() {
     });
   };
 
+  // Detailed day room availability (actively occupied vs available/free)
+  const getDayDetails = (dateNumber: number) => {
+    const allForDate = getReservationsForDate(dateNumber);
+
+    // If 'ALL' is selected in filter, only active CHECKED_IN or CONFIRMED reservations block a room.
+    // No-Show and Cancelled bookings are RELEASED (कोठा खाली भइसकेको छ)!
+    const activeOccupied = allForDate.filter(res => {
+      if (selectedStatusFilter === 'ALL') {
+        return res.status === 'CONFIRMED' || res.status === 'CHECKED_IN';
+      }
+      return true;
+    });
+
+    const occupiedRoomNumbers = new Set(activeOccupied.map(r => r.roomNumber));
+    const totalRooms = selectedRoomFilter === 'ALL' ? (rooms.length || 6) : 1;
+    const availableCount = Math.max(0, totalRooms - occupiedRoomNumbers.size);
+
+    return {
+      allForDate,
+      activeOccupied,
+      availableCount,
+      totalRooms,
+    };
+  };
+
   // Check if today
   const isToday = (dayNum: number) => {
     const now = new Date();
@@ -403,8 +428,9 @@ export default function ReservationsPage() {
             {/* Actual Days of the Month */}
             {Array.from({ length: daysInMonth }).map((_, idx) => {
               const dayNumber = idx + 1;
-              const dayReservations = getReservationsForDate(dayNumber);
+              const { activeOccupied, availableCount, totalRooms } = getDayDetails(dayNumber);
               const currentDayIsToday = isToday(dayNumber);
+              const formattedDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
 
               return (
                 <div
@@ -413,7 +439,7 @@ export default function ReservationsPage() {
                     currentDayIsToday ? 'bg-amber-50/40' : 'bg-white'
                   }`}
                 >
-                  {/* Day number header */}
+                  {/* Day number header & available status */}
                   <div className="flex justify-between items-center mb-1">
                     <span
                       className={`text-xs font-bold px-1.5 py-0.5 rounded-md ${
@@ -424,33 +450,58 @@ export default function ReservationsPage() {
                     >
                       {dayNumber}
                     </span>
-                    {dayReservations.length > 0 && (
-                      <span className="text-[10px] font-bold text-slate-400">
-                        {dayReservations.length} {dayReservations.length === 1 ? 'room' : 'rooms'}
+
+                    {/* Room Availability Pill: Clearly show if rooms are खाली (Available) */}
+                    {activeOccupied.length === 0 ? (
+                      <span
+                        className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-1.5 py-0.5 rounded-md flex items-center gap-1 shadow-2xs"
+                        title={`${totalRooms} वटै कोठा पूर्ण रूपमा खाली छन् (All ${totalRooms} rooms available)`}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        {totalRooms} खाली
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-medium text-slate-500">
+                        {activeOccupied.length} बुक • <span className="font-bold text-emerald-700">{availableCount} खाली</span>
                       </span>
                     )}
                   </div>
 
-                  {/* Reservation pills */}
+                  {/* Reservation pills or empty available room CTA */}
                   <div className="flex-1 space-y-1 overflow-y-auto max-h-[85px] pr-0.5">
-                    {dayReservations.map(res => {
-                      const badge = getStatusBadge(res.status);
-                      return (
-                        <div
-                          key={res.id}
-                          onClick={() => setSelectedRes(res)}
-                          className={`px-1.5 py-1 rounded-md text-[10px] font-bold cursor-pointer transition shadow-2xs truncate flex items-center justify-between gap-1 hover:brightness-110 ${badge.bg} ${badge.text}`}
-                          title={`Room ${res.roomNumber} - ${res.guestName} (${res.source})`}
-                        >
-                          <span className="truncate">
-                            R{res.roomNumber} {res.guestName.split(' ')[0]}
-                          </span>
-                          <span className="text-[9px] opacity-80 shrink-0 uppercase">
-                            {res.source.substring(0, 3)}
-                          </span>
-                        </div>
-                      );
-                    })}
+                    {activeOccupied.length === 0 ? (
+                      <Link
+                        href={`/reservations/new?checkIn=${formattedDateStr}`}
+                        className="h-full min-h-[48px] rounded-lg border border-dashed border-emerald-200/90 hover:border-emerald-500 hover:bg-emerald-50/70 transition flex flex-col items-center justify-center p-1 text-center group cursor-pointer"
+                        title={`${formattedDateStr} मा सबै कोठा खाली छन्। नयाँ बुकिङ गर्न थिच्नुहोस्`}
+                      >
+                        <span className="text-[10px] font-bold text-emerald-700 group-hover:text-emerald-800 flex items-center gap-1">
+                          + कोठा खाली
+                        </span>
+                        <span className="text-[9px] text-slate-400 group-hover:text-slate-600">
+                          (Click to Book)
+                        </span>
+                      </Link>
+                    ) : (
+                      activeOccupied.map(res => {
+                        const badge = getStatusBadge(res.status);
+                        return (
+                          <div
+                            key={res.id}
+                            onClick={() => setSelectedRes(res)}
+                            className={`px-1.5 py-1 rounded-md text-[10px] font-bold cursor-pointer transition shadow-2xs truncate flex items-center justify-between gap-1 hover:brightness-110 ${badge.bg} ${badge.text}`}
+                            title={`Room ${res.roomNumber} - ${res.guestName} (${res.source}) • ${badge.label}`}
+                          >
+                            <span className="truncate">
+                              R{res.roomNumber} {res.guestName.split(' ')[0]}
+                            </span>
+                            <span className="text-[9px] opacity-80 shrink-0 uppercase">
+                              {res.source.substring(0, 3)}
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
               );
@@ -553,9 +604,14 @@ export default function ReservationsPage() {
                               {booking.guestName.split(' ')[0]}
                             </div>
                           ) : (
-                            <div className="h-7 rounded flex items-center justify-center text-slate-300 text-[10px]">
-                              —
-                            </div>
+                            <Link
+                              href={`/reservations/new?room=${room.number}&checkIn=${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`}
+                              className="h-7 rounded-md border border-dashed border-emerald-300/80 hover:border-emerald-500 hover:bg-emerald-50 text-emerald-700 text-[10px] font-bold flex items-center justify-center transition group cursor-pointer"
+                              title={`Room ${room.number} खाली छ (Available) - नयाँ बुकिङ गर्न थिच्नुहोस्`}
+                            >
+                              <span className="text-emerald-600/70 group-hover:hidden">खाली</span>
+                              <span className="hidden group-hover:inline-flex items-center gap-0.5 text-emerald-700 font-black">+ बुक</span>
+                            </Link>
                           )}
                         </td>
                       );

@@ -41,6 +41,13 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const statusParam = searchParams.get('status');
 
+    // Auto-release expired un-checked-in bookings so rooms immediately become AVAILABLE (खाली)
+    try {
+      await autoReleaseExpiredNoShows();
+    } catch (sweepErr) {
+      console.warn('Auto-release expired no-shows background check failed:', sweepErr);
+    }
+
     const reservations = await prisma.reservation.findMany({
       where: {
         ...(statusParam && { status: statusParam as ReservationStatus }),

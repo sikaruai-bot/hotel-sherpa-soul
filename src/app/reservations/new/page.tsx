@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useMemo, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   User, 
   Calendar, 
@@ -28,8 +28,9 @@ import Link from 'next/link';
 import { usePms } from '@/context/PmsContext';
 import LiveCameraCaptureModal from '@/components/LiveCameraCaptureModal';
 
-export default function NewReservationPage() {
+function NewReservationForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { rooms, addReservation, checkRoomAvailability } = usePms();
 
   const [formData, setFormData] = useState({
@@ -59,6 +60,25 @@ export default function NewReservationPage() {
   const [guestLookupData, setGuestLookupData] = useState<any | null>(null);
   const [showStaysTimeline, setShowStaysTimeline] = useState(false);
   const [blacklistOverride, setBlacklistOverride] = useState(false);
+
+  // Prefill room and checkIn dates from URL search params when clicked from calendar/tape-chart
+  useEffect(() => {
+    const roomParam = searchParams.get('room');
+    const checkInParam = searchParams.get('checkIn');
+    if (roomParam || checkInParam) {
+      setFormData(prev => {
+        const inDate = checkInParam || prev.checkInDate;
+        const start = new Date(inDate);
+        const end = new Date(start.getTime() + 86400000 * 2);
+        const outDate = end.toISOString().split('T')[0];
+        return {
+          ...prev,
+          ...(roomParam && { roomNumber: roomParam }),
+          ...(checkInParam && { checkInDate: inDate, checkOutDate: outDate }),
+        };
+      });
+    }
+  }, [searchParams]);
 
   // Debounced ID-First & Phone lookup
   useEffect(() => {
@@ -851,5 +871,17 @@ export default function NewReservationPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function NewReservationPage() {
+  return (
+    <Suspense fallback={
+      <div className="max-w-4xl mx-auto p-12 text-center text-slate-500 font-bold text-sm">
+        बुकिङ फाराम खुल्दैछ (Loading booking form)...
+      </div>
+    }>
+      <NewReservationForm />
+    </Suspense>
   );
 }
