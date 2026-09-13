@@ -15,7 +15,7 @@ export default function SelfCheckinQrModal({ isOpen, onClose }: SelfCheckinQrMod
 
   const checkinUrl = typeof window !== 'undefined' 
     ? `${window.location.origin}/self-checkin` 
-    : 'https://hotelsherpasoulpms-sigma.vercel.app/self-checkin';
+    : 'https://pms.hotelsherpasoul.com/self-checkin';
 
   // Crisp high-res QR code image generated via standard Google Charts / QRServer API
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${encodeURIComponent(checkinUrl)}&color=0f172a&bgcolor=ffffff&margin=1`;

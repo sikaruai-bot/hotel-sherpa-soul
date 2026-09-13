@@ -52,6 +52,42 @@ export default function RoomsPage() {
         </div>
       </div>
 
+      {/* 3 Category Rate Showcase: USD ($) & NPR (रू.) */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-4 rounded-2xl text-white border border-slate-700/60 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center text-amber-300 font-black text-sm">
+            $
+          </div>
+          <div>
+            <h3 className="font-bold text-xs text-white">आधिकारिक रुम दरहरू (Official Rates: Dual Currency)</h3>
+            <p className="text-[11px] text-slate-300">NRB विनिमय दर: $1 USD = रू. 135 (NPR)</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 text-xs">
+          <span className="px-3 py-1.5 rounded-xl bg-blue-900/60 border border-blue-400/30 text-blue-200 flex items-center gap-1.5">
+            <span className="font-bold text-white">Deluxe (201, 301):</span>
+            <span className="font-black text-amber-300">$20 USD</span>
+            <span className="text-slate-400">/</span>
+            <span className="font-bold">रू. 2,700 NPR</span>
+          </span>
+
+          <span className="px-3 py-1.5 rounded-xl bg-purple-900/60 border border-purple-400/30 text-purple-200 flex items-center gap-1.5">
+            <span className="font-bold text-white">Family (202, 302):</span>
+            <span className="font-black text-amber-300">$30 USD</span>
+            <span className="text-slate-400">/</span>
+            <span className="font-bold">रू. 4,050 NPR</span>
+          </span>
+
+          <span className="px-3 py-1.5 rounded-xl bg-amber-900/60 border border-amber-400/30 text-amber-200 flex items-center gap-1.5">
+            <span className="font-bold text-white">Budget Family (203, 303):</span>
+            <span className="font-black text-amber-300">$20 USD</span>
+            <span className="text-slate-400">/</span>
+            <span className="font-bold">रू. 2,700 NPR</span>
+          </span>
+        </div>
+      </div>
+
       {/* Floor 2 */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
         <div className="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -82,9 +118,16 @@ export default function RoomsPage() {
                     </span>
                   </div>
 
-                  <div className="mt-3 space-y-1 text-xs text-slate-600">
+                  <div className="mt-3 space-y-1.5 text-xs text-slate-600">
                     <p>Bed: <strong className="text-slate-800">{r.bedType}</strong> (Max {r.capacity} Guests)</p>
-                    <p>Daily Rate: <strong className="text-slate-800">NPR {r.dailyRate.toLocaleString()}</strong></p>
+                    <p className="flex items-center gap-1 flex-wrap">
+                      <span>Daily Rate:</span>
+                      <strong className="text-slate-900 font-extrabold bg-white/90 px-1.5 py-0.5 rounded border border-slate-200">
+                        ${r.dailyRateUsd || (r.dailyRate === 4050 ? 30 : 20)} USD
+                      </strong>
+                      <span className="text-slate-400">/</span>
+                      <strong className="text-slate-800 font-bold">रू. {r.dailyRate.toLocaleString()} NPR</strong>
+                    </p>
                     <p>Guest: <strong className="text-slate-800">{r.currentGuest || 'None'}</strong></p>
                     {r.maintenanceNote && (
                       <p className="text-rose-700 font-bold bg-rose-100/80 p-1.5 rounded-lg mt-1 text-[11px]">
@@ -154,9 +197,16 @@ export default function RoomsPage() {
                     </span>
                   </div>
 
-                  <div className="mt-3 space-y-1 text-xs text-slate-600">
+                  <div className="mt-3 space-y-1.5 text-xs text-slate-600">
                     <p>Bed: <strong className="text-slate-800">{r.bedType}</strong> (Max {r.capacity} Guests)</p>
-                    <p>Daily Rate: <strong className="text-slate-800">NPR {r.dailyRate.toLocaleString()}</strong></p>
+                    <p className="flex items-center gap-1 flex-wrap">
+                      <span>Daily Rate:</span>
+                      <strong className="text-slate-900 font-extrabold bg-white/90 px-1.5 py-0.5 rounded border border-slate-200">
+                        ${r.dailyRateUsd || (r.dailyRate === 4050 ? 30 : 20)} USD
+                      </strong>
+                      <span className="text-slate-400">/</span>
+                      <strong className="text-slate-800 font-bold">रू. {r.dailyRate.toLocaleString()} NPR</strong>
+                    </p>
                     <p>Guest: <strong className="text-slate-800">{r.currentGuest || 'None'}</strong></p>
                     {r.maintenanceNote && (
                       <p className="text-rose-700 font-bold bg-rose-100/80 p-1.5 rounded-lg mt-1 text-[11px]">

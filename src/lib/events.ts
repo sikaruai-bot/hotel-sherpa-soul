@@ -7,7 +7,9 @@ export type PmsEventName =
   | 'payment.received'
   | 'housekeeping.assigned'
   | 'maintenance.created'
-  | 'kitchen.alert';
+  | 'kitchen.alert'
+  | 'reservation.no_show'
+  | 'room.auto_released';
 
 export interface PmsEventPayload {
   event: PmsEventName;

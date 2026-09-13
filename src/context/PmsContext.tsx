@@ -10,6 +10,7 @@ export interface Room {
   capacity: number;
   bedType: string;
   dailyRate: number;
+  dailyRateUsd?: number;
   weeklyRate: number;
   monthlyRate: number;
   status: 'AVAILABLE' | 'RESERVED' | 'OCCUPIED' | 'CHECK_IN_TODAY' | 'CHECK_OUT_TODAY' | 'CLEANING_REQUIRED' | 'UNDER_MAINTENANCE' | 'LONG_STAY';
@@ -72,7 +73,7 @@ export interface Reservation {
   accompanyingGuests?: string;
   totalAmount: number;
   paidAmount: number;
-  status: 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED';
+  status: 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED' | 'NO_SHOW';
   source: 'Booking.com' | 'Agoda' | 'Airbnb' | 'Trip.com' | 'Direct Website' | 'Walk-In' | 'WhatsApp' | 'Phone';
   specialRequests?: string;
   createdAt: string;
@@ -217,16 +218,18 @@ interface PmsContextType {
   resolveMaintenanceTicket: (ticketId: string) => void;
   createInvoice: (invoice: Omit<Invoice, 'id'>) => Invoice;
   recordPayment: (invoiceId: string, amount: number, method: Invoice['paymentMethod']) => void;
+  releaseNoShow: (reservationId: string, reason?: string) => void;
+  scanAndReleaseNoShows: (cutOffHour?: number) => Promise<{ releasedCount: number }>;
   toggleStopSell: () => void;
 }
 
 const initialRooms: Room[] = [
-  { id: '1', number: '201', floor: 2, type: 'Standard Double', capacity: 2, bedType: 'Queen Bed', dailyRate: 3500, weeklyRate: 21000, monthlyRate: 45000, status: 'AVAILABLE', kitchenEligible: true, longStayEligible: true },
-  { id: '2', number: '202', floor: 2, type: 'Standard Double', capacity: 2, bedType: 'Queen Bed', dailyRate: 3500, weeklyRate: 21000, monthlyRate: 45000, status: 'OCCUPIED', kitchenEligible: true, longStayEligible: true, currentGuest: 'Sarah Connor', cleaningStaff: 'Pasang Lhamu' },
-  { id: '3', number: '203', floor: 2, type: 'Deluxe Twin', capacity: 2, bedType: '2 Single Beds', dailyRate: 4200, weeklyRate: 25000, monthlyRate: 50000, status: 'LONG_STAY', kitchenEligible: true, longStayEligible: true, currentGuest: 'Carlos Gomez', cleaningStaff: 'Dawa Sherpa' },
-  { id: '4', number: '301', floor: 3, type: 'Deluxe Double', capacity: 2, bedType: 'King Bed', dailyRate: 4500, weeklyRate: 27000, monthlyRate: 55000, status: 'UNDER_MAINTENANCE', kitchenEligible: true, longStayEligible: true, maintenanceNote: 'Shower pressure calibration' },
-  { id: '5', number: '302', floor: 3, type: 'Standard Twin', capacity: 2, bedType: '2 Single Beds', dailyRate: 3800, weeklyRate: 23000, monthlyRate: 48000, status: 'LONG_STAY', kitchenEligible: true, longStayEligible: true, currentGuest: 'Jane Smith', cleaningStaff: 'Dawa Sherpa' },
-  { id: '6', number: '303', floor: 3, type: 'Family Suite', capacity: 4, bedType: '1 King + 2 Singles', dailyRate: 6500, weeklyRate: 39000, monthlyRate: 85000, status: 'AVAILABLE', kitchenEligible: true, longStayEligible: true },
+  { id: '1', number: '201', floor: 2, type: 'Deluxe Room', capacity: 2, bedType: 'King Bed', dailyRate: 2700, dailyRateUsd: 20, weeklyRate: 16200, monthlyRate: 50000, status: 'AVAILABLE', kitchenEligible: true, longStayEligible: true },
+  { id: '2', number: '202', floor: 2, type: 'Family Room', capacity: 4, bedType: 'Queen + Single Bed', dailyRate: 4050, dailyRateUsd: 30, weeklyRate: 24300, monthlyRate: 70000, status: 'OCCUPIED', kitchenEligible: true, longStayEligible: true, currentGuest: 'Sarah Connor', cleaningStaff: 'Pasang Lhamu' },
+  { id: '3', number: '203', floor: 2, type: 'Budget Family Room', capacity: 4, bedType: 'Twin Double Beds', dailyRate: 2700, dailyRateUsd: 20, weeklyRate: 16200, monthlyRate: 45000, status: 'LONG_STAY', kitchenEligible: true, longStayEligible: true, currentGuest: 'Carlos Gomez', cleaningStaff: 'Dawa Sherpa' },
+  { id: '4', number: '301', floor: 3, type: 'Deluxe Room', capacity: 2, bedType: 'King Bed', dailyRate: 2700, dailyRateUsd: 20, weeklyRate: 16200, monthlyRate: 50000, status: 'UNDER_MAINTENANCE', kitchenEligible: true, longStayEligible: true, maintenanceNote: 'Shower pressure calibration' },
+  { id: '5', number: '302', floor: 3, type: 'Family Room', capacity: 4, bedType: 'Queen + Single Bed', dailyRate: 4050, dailyRateUsd: 30, weeklyRate: 24300, monthlyRate: 70000, status: 'LONG_STAY', kitchenEligible: true, longStayEligible: true, currentGuest: 'Jane Smith', cleaningStaff: 'Dawa Sherpa' },
+  { id: '6', number: '303', floor: 3, type: 'Budget Family Room', capacity: 4, bedType: 'Twin Double Beds', dailyRate: 2700, dailyRateUsd: 20, weeklyRate: 16200, monthlyRate: 45000, status: 'AVAILABLE', kitchenEligible: true, longStayEligible: true },
 ];
 
 const initialReservations: Reservation[] = [
@@ -500,8 +503,15 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.warn('LocalStorage not available or parse error', e);
     }
-    // Attempt backend sync
+    // Attempt backend sync and auto-release expired no-shows
     refreshFromBackend();
+    scanAndReleaseNoShows();
+
+    const interval = setInterval(() => {
+      scanAndReleaseNoShows();
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Save changes to LocalStorage
@@ -546,7 +556,7 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 1. Check reservation overlap for the target room
     reservations.forEach((r) => {
       if (excludeReservationId && r.id === excludeReservationId) return;
-      if (r.status === 'CANCELLED' || r.status === 'CHECKED_OUT') return;
+      if (r.status === 'CANCELLED' || r.status === 'CHECKED_OUT' || r.status === 'NO_SHOW') return;
       if (r.roomNumber !== roomNumber) return;
 
       const rStart = new Date(r.checkInDate);
@@ -600,6 +610,60 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     }
 
+    // 3.5 CATEGORY-LEVEL CAPACITY SHIELD (Max 2 rooms per category per day)
+    const getCategoryDetails = (rm: string) => {
+      if (rm === '201' || rm === '301') return { name: 'Deluxe Room', rooms: ['201', '301'] };
+      if (rm === '202' || rm === '302') return { name: 'Family Room', rooms: ['202', '302'] };
+      if (rm === '203' || rm === '303') return { name: 'Budget Family Room', rooms: ['203', '303'] };
+      return null;
+    };
+
+    const categoryInfo = getCategoryDetails(roomNumber);
+    if (categoryInfo) {
+      const bookedCategoryRooms = new Set<string>();
+
+      reservations.forEach((r) => {
+        if (excludeReservationId && r.id === excludeReservationId) return;
+        if (r.status === 'CANCELLED' || r.status === 'CHECKED_OUT' || r.status === 'NO_SHOW') return;
+        if (!categoryInfo.rooms.includes(r.roomNumber)) return;
+
+        const rStart = new Date(r.checkInDate);
+        rStart.setHours(0, 0, 0, 0);
+        const rEnd = new Date(r.checkOutDate);
+        rEnd.setHours(0, 0, 0, 0);
+
+        if (start < rEnd && end > rStart) {
+          bookedCategoryRooms.add(r.roomNumber);
+        }
+      });
+
+      contracts.forEach((c) => {
+        if (c.status !== 'ACTIVE' && c.status !== 'EXPIRING') return;
+        if (!categoryInfo.rooms.includes(c.roomNumber)) return;
+
+        const cStart = new Date(c.startDate);
+        cStart.setHours(0, 0, 0, 0);
+        const cEnd = new Date(c.endDate);
+        cEnd.setHours(0, 0, 0, 0);
+
+        if (start < cEnd && end > cStart) {
+          bookedCategoryRooms.add(c.roomNumber);
+        }
+      });
+
+      // If already 2 rooms booked in this category, block!
+      if (bookedCategoryRooms.size >= 2) {
+        conflicts.push({
+          type: 'RESERVATION',
+          title: `Category Capacity Full (2/2 Booked)`,
+          guestName: `${categoryInfo.name} Blocked (Rooms ${categoryInfo.rooms.join(' & ')})`,
+          checkInDate,
+          checkOutDate,
+          source: 'Category Shield',
+        });
+      }
+    }
+
     // 4. Calculate which rooms are 100% available across the entire date range
     const availableRooms = rooms.filter((rm) => {
       if (rm.status === 'UNDER_MAINTENANCE') return false;
@@ -607,7 +671,7 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // check if any reservation collides with rm
       const hasResOverlap = reservations.some((r) => {
         if (excludeReservationId && r.id === excludeReservationId) return false;
-        if (r.status === 'CANCELLED' || r.status === 'CHECKED_OUT') return false;
+        if (r.status === 'CANCELLED' || r.status === 'CHECKED_OUT' || r.status === 'NO_SHOW') return false;
         if (r.roomNumber !== rm.number) return false;
 
         const rStart = new Date(r.checkInDate);
@@ -1166,6 +1230,86 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }).catch(err => console.warn('Sync payment error:', err));
   };
 
+  const releaseNoShow = (reservationId: string, reason?: string) => {
+    let targetRoomNumber = '';
+    let guest = '';
+    const updatedReservations = reservations.map(r => {
+      if (r.id === reservationId) {
+        targetRoomNumber = r.roomNumber;
+        guest = r.guestName;
+        return {
+          ...r,
+          status: 'NO_SHOW' as const,
+        };
+      }
+      return r;
+    });
+    setReservations(updatedReservations);
+
+    // Free room back to AVAILABLE and clear currentGuest
+    const updatedRooms = rooms.map(r => {
+      if (r.number === targetRoomNumber) {
+        return {
+          ...r,
+          status: 'AVAILABLE' as const,
+          currentGuest: undefined,
+        };
+      }
+      return r;
+    });
+    setRooms(updatedRooms);
+
+    const newNotif: NotificationItem = {
+      id: `NOTIF-${Date.now()}`,
+      title: `No-Show Released: Room ${targetRoomNumber}`,
+      detail: `Reservation for ${guest} marked NO-SHOW. Room ${targetRoomNumber} is now 100% AVAILABLE on calendar.`,
+      timestamp: 'Just now',
+      type: 'Booking',
+      channel: 'In-App',
+      status: 'Delivered',
+    };
+    const updatedNotifs = [newNotif, ...notifications];
+    setNotifications(updatedNotifs);
+
+    persist({
+      rooms: updatedRooms,
+      reservations: updatedReservations,
+      contracts,
+      kitchenUsers,
+      kitchenIncidents,
+      gasLevel,
+      housekeepingTasks,
+      maintenanceTickets,
+      invoices,
+      notifications: updatedNotifs,
+      stopSellActive,
+    });
+
+    // Background sync to API
+    fetch(`/api/reservations/${reservationId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'NO_SHOW' }),
+    }).catch(err => console.warn('Sync no-show error:', err));
+  };
+
+  const scanAndReleaseNoShows = async (cutOffHour: number = 18): Promise<{ releasedCount: number }> => {
+    try {
+      const res = await fetch(`/api/cron/auto-release-noshow?cutOffHour=${cutOffHour}`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (data.success && data.data?.releasedCount > 0) {
+        await refreshFromBackend();
+        return { releasedCount: data.data.releasedCount };
+      }
+      return { releasedCount: 0 };
+    } catch (err) {
+      console.warn('Scan no-shows failed:', err);
+      return { releasedCount: 0 };
+    }
+  };
+
   const toggleStopSell = () => {
     const newStatus = !stopSellActive;
     setStopSellActive(newStatus);
@@ -1211,6 +1355,8 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         resolveMaintenanceTicket,
         createInvoice,
         recordPayment,
+        releaseNoShow,
+        scanAndReleaseNoShows,
         toggleStopSell,
       }}
     >

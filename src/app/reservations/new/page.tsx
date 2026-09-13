@@ -324,7 +324,9 @@ export default function NewReservationPage() {
                     </div>
 
                     <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-700">NPR {r.dailyRate.toLocaleString()} <span className="text-[10px] text-slate-400 font-normal">/nt</span></span>
+                      <span className="font-bold text-slate-700">
+                        ${r.dailyRateUsd || (r.dailyRate === 4050 ? 30 : 20)} USD <span className="text-slate-400 font-normal">/</span> रू. {r.dailyRate.toLocaleString()} <span className="text-[10px] text-slate-400 font-normal">/nt</span>
+                      </span>
                       {isSelected && (
                         <span className="text-[10px] font-black uppercase text-blue-700">Selected</span>
                       )}
@@ -450,13 +452,21 @@ export default function NewReservationPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">Total Room Price (NPR)</label>
-              <input 
-                type="number" 
-                value={formData.totalAmount}
-                onChange={e => setFormData({ ...formData, totalAmount: Number(e.target.value) })}
-                className="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-emerald-600 text-sm font-bold text-slate-900" 
-              />
+              <div className="flex justify-between items-center">
+                <label className="text-xs font-bold text-slate-700">Total Room Price (जम्मा रकम)</label>
+                <span className="text-xs font-extrabold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                  ≈ ${(formData.totalAmount / 135).toFixed(1)} USD
+                </span>
+              </div>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">रु. (NPR)</span>
+                <input 
+                  type="number" 
+                  value={formData.totalAmount}
+                  onChange={e => setFormData({ ...formData, totalAmount: Number(e.target.value) })}
+                  className="w-full pl-20 pr-3 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-emerald-600 text-sm font-bold text-slate-900" 
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">

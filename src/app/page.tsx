@@ -180,9 +180,12 @@ export default function Dashboard() {
             </span>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-extrabold text-slate-900">NPR {todayRevenue.toLocaleString()}</span>
+            <div className="flex items-baseline gap-1.5 flex-wrap">
+              <span className="text-2xl font-extrabold text-slate-900">NPR {todayRevenue.toLocaleString()}</span>
+              <span className="text-xs font-bold text-slate-500">(${Math.round(todayRevenue / 135)} USD)</span>
+            </div>
             <p className="text-xs text-emerald-600 font-semibold mt-1 flex items-center gap-0.5">
-              <ArrowUpRight size={14} /> NPR {pendingRevenue.toLocaleString()} pending
+              <ArrowUpRight size={14} /> NPR {pendingRevenue.toLocaleString()} (${Math.round(pendingRevenue / 135)} USD) pending
             </p>
           </div>
           <div className="flex items-center justify-between mt-3">
@@ -276,10 +279,12 @@ export default function Dashboard() {
                     </div>
                     <p className="text-xs text-slate-600 mt-1 font-medium">{r.type} • Floor {r.floor}</p>
                     <div className="mt-3 pt-2.5 border-t border-black/5 flex justify-between items-center text-xs">
-                      <span className="text-slate-500 truncate max-w-[120px]">
+                      <span className="text-slate-500 truncate max-w-[100px]">
                         {r.currentGuest || 'No Guest'}
                       </span>
-                      <span className="font-bold text-slate-800">NPR {r.dailyRate}/d</span>
+                      <span className="font-bold text-slate-900 text-[11px]">
+                        ${r.dailyRateUsd || (r.dailyRate === 4050 ? 30 : 20)} USD <span className="text-slate-400">/</span> रु. {r.dailyRate.toLocaleString()}
+                      </span>
                     </div>
                     <div className="mt-2 text-[10px] text-blue-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 justify-end">
                       <span>View in Calendar</span> &rarr;

@@ -123,6 +123,8 @@ enum BookingSource {
   AGODA
   AIRBNB
   TRIP_COM
+  EXPEDIA
+  VRBO
   DIRECT
   WEBSITE
   WHATSAPP
@@ -322,3 +324,50 @@ model WebhookLog {
   payload     String          // Stored JSON payload
   createdAt   DateTime        @default(now())
 }
+
+model OtaConnection {
+  id           String    @id @default(uuid())
+  channel      String    // BOOKING_COM, AIRBNB, AGODA, EXPEDIA, TRIP_COM, VRBO, CUSTOM
+  roomNumber   String    // 201, 202, 203, 301, 302, 303, ALL
+  importUrl    String?   // External OTA iCal URL pasted by user
+  exportToken  String    @default(uuid()) // PMS calendar export token
+  isActive     Boolean   @default(true)
+  lastSyncedAt DateTime?
+  syncStatus   String    @default("IDLE") // IDLE, SYNCING, SUCCESS, ERROR
+  syncMessage  String?
+  eventsCount  Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([channel, roomNumber])
+}
+
+model OtaSyncLog {
+  id          String   @id @default(uuid())
+  channel     String
+  roomNumber  String
+  action      String   // IMPORT_ICAL, EXPORT_ICAL, WEBHOOK_PUSH, RATE_PUSH, MANUAL_SYNC
+  status      String   // SUCCESS, CONFLICT_PREVENTED, ERROR
+  message     String
+  details     String?  // JSON string
+  createdAt   DateTime @default(now())
+}
+
+model HotelSetting {
+  id                   String   @id @default("default")
+  hotelName            String   @default("Hotel Sherpa Soul")
+  officialEmail        String   @default("info@hotelsherpasoul.com")
+  managerEmail         String   @default("manager@hotelsherpasoul.com")
+  phone                String   @default("+977 9801234567")
+  address              String   @default("Bhagawati Marg -26, Thamel, Kathmandu, Nepal")
+  notifyOnBooking      Boolean  @default(true)
+  notifyGuestOnBooking Boolean  @default(true)
+  notifyOnRoomFull     Boolean  @default(true)
+  smtpHost             String?
+  smtpPort             Int?     @default(587)
+  smtpUser             String?
+  smtpPass             String?
+  smtpSecure           Boolean  @default(false)
+  updatedAt            DateTime @updatedAt
+}
+

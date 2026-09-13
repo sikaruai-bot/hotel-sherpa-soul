@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { BookingSource, ReservationStatus, RoomStatus } from '@prisma/client';
 import { emitPmsEvent } from '@/lib/events';
+import { autoReleaseExpiredNoShows } from '@/lib/autoReleaseNoShows';
+import { checkCategoryCapacity, getAvailableAlternatives, dispatchRoomFullAlert } from '@/lib/roomCategoryShield';
+import { sendBookingNotificationToOfficialMail, sendBookingConfirmationToGuest } from '@/lib/emailService';
 
 // Map UI sources to Prisma enum values
 const sourceMap: Record<string, BookingSource> = {
@@ -9,6 +12,8 @@ const sourceMap: Record<string, BookingSource> = {
   'Agoda': BookingSource.AGODA,
   'Airbnb': BookingSource.AIRBNB,
   'Trip.com': BookingSource.TRIP_COM,
+  'Expedia': BookingSource.EXPEDIA,
+  'Vrbo': BookingSource.VRBO,
   'Direct Website': BookingSource.DIRECT,
   'Walk-In': BookingSource.WALK_IN,
   'WhatsApp': BookingSource.WHATSAPP,
@@ -21,6 +26,8 @@ const reverseSourceMap: Record<BookingSource, string> = {
   [BookingSource.AGODA]: 'Agoda',
   [BookingSource.AIRBNB]: 'Airbnb',
   [BookingSource.TRIP_COM]: 'Trip.com',
+  [BookingSource.EXPEDIA]: 'Expedia',
+  [BookingSource.VRBO]: 'Vrbo',
   [BookingSource.DIRECT]: 'Direct Website',
   [BookingSource.WEBSITE]: 'Direct Website',
   [BookingSource.WALK_IN]: 'Walk-In',
@@ -33,6 +40,11 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const statusParam = searchParams.get('status');
+
+    // 1. Auto-sweep and release any expired no-show bookings to unblock rooms
+    await autoReleaseExpiredNoShows().catch((err) =>
+      console.warn('Auto-release no-show error on reservations GET:', err)
+    );
 
     const reservations = await prisma.reservation.findMany({
       where: {
@@ -126,6 +138,52 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, error: `Room ${roomNumber} not found` },
         { status: 404 }
+      );
+    }
+
+    // Auto-sweep expired no-shows before checking conflict so un-checked-in rooms can be booked
+    await autoReleaseExpiredNoShows().catch((err) =>
+      console.warn('Auto-release no-show error on reservations POST:', err)
+    );
+
+    // 2.5 CATEGORY-LEVEL CAPACITY SHIELD: Max 2 rooms per category per day
+    const categoryCheck = await checkCategoryCapacity({
+      categoryOrRoom: String(roomNumber),
+      checkInDate: start,
+      checkOutDate: end,
+    });
+
+    if (!categoryCheck.isAvailable) {
+      const alternatives = await getAvailableAlternatives({
+        checkInDate: start,
+        checkOutDate: end,
+        excludeCategoryId: categoryCheck.category.id,
+      });
+
+      const alertResult = await dispatchRoomFullAlert({
+        guestName: body.guestName,
+        phone: body.phoneNumber || body.phone,
+        email: body.email,
+        requestedCategory: categoryCheck.category.name,
+        checkInDate: String(checkInDate),
+        checkOutDate: String(checkOutDate),
+        alternatives,
+        source: body.source,
+      });
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: categoryCheck.conflictReason,
+          category: categoryCheck.category.name,
+          capacity: categoryCheck.totalCapacity,
+          bookedCount: categoryCheck.bookedCount,
+          roomFullMessage: alertResult.messageNepali,
+          roomFullMessageEnglish: alertResult.fullMessage,
+          alternatives: alertResult.alternatives,
+          notificationStatus: alertResult.dispatchStatus,
+        },
+        { status: 409 }
       );
     }
 
@@ -279,6 +337,40 @@ export async function POST(request: Request) {
         status: 'Delivered',
       },
     });
+
+    // 5.5 Automatically send email notification to Official Hotel Email & Guest
+    sendBookingNotificationToOfficialMail({
+      id: reservation.id,
+      guestName,
+      email: guest.email,
+      phone: guest.phoneNumber,
+      nationality: guest.nationality,
+      roomNumber: room.roomNumber,
+      roomType: room.roomType.name,
+      checkInDate: new Date(checkInDate),
+      checkOutDate: new Date(checkOutDate),
+      adults: Number(adults),
+      children: Number(children),
+      totalAmount: Number(totalAmount),
+      paidAmount: Number(paidAmount),
+      source,
+      specialRequests,
+      otaReference,
+    }).catch((err) => console.warn('Official email notification error:', err));
+
+    if (guest.email) {
+      sendBookingConfirmationToGuest({
+        id: reservation.id,
+        guestName,
+        email: guest.email,
+        phone: guest.phoneNumber,
+        roomNumber: room.roomNumber,
+        roomType: room.roomType.name,
+        checkInDate: new Date(checkInDate),
+        checkOutDate: new Date(checkOutDate),
+        totalAmount: Number(totalAmount),
+      }).catch((err) => console.warn('Guest confirmation email error:', err));
+    }
 
     // 6. Emit Automation Event for Webhooks & Zapier
     await emitPmsEvent('booking.created', {

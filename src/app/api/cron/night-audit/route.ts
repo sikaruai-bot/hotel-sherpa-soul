@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { autoReleaseExpiredNoShows } from '@/lib/autoReleaseNoShows';
 
 export async function GET() {
   return executeNightAudit();
@@ -13,7 +14,10 @@ async function executeNightAudit() {
   try {
     const today = new Date();
 
-    // 1. Expire past kitchen passes
+    // 1. Auto-release expired un-checked-in bookings (No-Shows) to free rooms for new guests
+    const noShowSweep = await autoReleaseExpiredNoShows(18);
+
+    // 2. Expire past kitchen passes
     const expiredPasses = await prisma.kitchenUser.updateMany({
       where: {
         accessEndDate: { lt: today },

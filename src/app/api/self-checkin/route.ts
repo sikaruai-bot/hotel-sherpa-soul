@@ -124,6 +124,7 @@ export async function POST(request: Request) {
       paymentMethod = 'eSewa / Fonepay QR',
       transactionId,
       paidAmountNow,
+      receiptUrl,
     } = body;
 
     const actualIdNumber = (idNumber || passportNumber || '').trim();
@@ -170,13 +171,16 @@ export async function POST(request: Request) {
     const currentBalanceDue = Math.max(0, reservation.totalAmount - reservation.paidAmount);
 
     // 🔒 STRICT PAYMENT GATE:
-    // If balance is due, guest MUST provide payment proof before check-in can be active!
+    // If balance is due, guest MUST provide genuine payment proof before check-in can succeed!
     if (currentBalanceDue > 0) {
-      if (!transactionId || transactionId.trim().length < 3) {
+      const cleanTxn = (transactionId || '').trim();
+      const invalidPlaceholders = ['none', 'na', 'null', 'test', '123', '1234', '0000', 'asdf', 'fake', 'no', 'unpaid'];
+      
+      if (!cleanTxn || cleanTxn.length < 5 || invalidPlaceholders.includes(cleanTxn.toLowerCase())) {
         return NextResponse.json(
           {
             success: false,
-            error: `Payment of NPR ${currentBalanceDue.toLocaleString()} is required before check-in. Please scan the QR code to pay and enter your Transaction/Reference ID.`,
+            error: `Payment of NPR ${currentBalanceDue.toLocaleString()} is mandatory before check-in. Please scan the QR code to complete payment via eSewa/Fonepay and enter your valid Transaction/Reference ID.`,
             requiresPayment: true,
             balanceDue: currentBalanceDue,
           },
@@ -209,7 +213,7 @@ export async function POST(request: Request) {
             tax: 0,
             total: reservation.totalAmount,
             paidAmount: finalPaidAmount,
-            status: finalPaidAmount >= reservation.totalAmount ? InvoiceStatus.PAID : InvoiceStatus.PARTIAL,
+            status: InvoiceStatus.PAID,
             paymentMethod,
           },
         });
@@ -218,7 +222,7 @@ export async function POST(request: Request) {
           where: { id: invoice.id },
           data: {
             paidAmount: finalPaidAmount,
-            status: finalPaidAmount >= invoice.total ? InvoiceStatus.PAID : InvoiceStatus.PARTIAL,
+            status: InvoiceStatus.PAID,
             paymentMethod,
           },
         });
@@ -336,6 +340,9 @@ export async function POST(request: Request) {
         paidAmount: finalPaidAmount,
         totalAmount: reservation.totalAmount,
         paymentStatus: 'PAID & SETTLED',
+        paymentMethod: paymentMethod || (currentBalanceDue > 0 ? 'eSewa / Fonepay QR' : 'Prepaid Online (OTA)'),
+        transactionId: transactionId || 'PREPAID_ONLINE',
+        receiptUrl: receiptUrl || null,
         idType: idType,
         idNumber: actualIdNumber,
         maleGuests: parsedMale,

@@ -24,13 +24,33 @@ import {
   Key,
   Check,
   Mail,
-  Users
+  Users,
+  UserX,
+  RefreshCw,
+  Zap
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePms, Reservation, Room, GuestIdType, PurposeOfVisitType } from '@/context/PmsContext';
 
 export default function ReservationsPage() {
-  const { reservations, rooms, checkInGuest, checkOutGuest } = usePms();
+  const { reservations, rooms, checkInGuest, checkOutGuest, releaseNoShow, scanAndReleaseNoShows } = usePms();
+  const [scanningNoShows, setScanningNoShows] = useState(false);
+  const [sweepToast, setSweepToast] = useState<string | null>(null);
+
+  const handleManualSweep = async () => {
+    setScanningNoShows(true);
+    try {
+      const res = await scanAndReleaseNoShows();
+      if (res.releasedCount > 0) {
+        setSweepToast(`सफलतापूर्वक ${res.releasedCount} म्याद नाघेका कोठा खाली गरियो (Auto-released ${res.releasedCount} room(s) as Available)!`);
+      } else {
+        setSweepToast('सबै कोठाहरू दुरुस्त छन् — कुनै पनि म्याद नाघेको नो-शो भेटिएन (All rooms are up to date. No expired bookings).');
+      }
+      setTimeout(() => setSweepToast(null), 5000);
+    } finally {
+      setScanningNoShows(false);
+    }
+  };
 
   // Current view mode: 'month' (classic calendar) or 'timeline' (room tape-chart)
   const [viewMode, setViewMode] = useState<'month' | 'timeline'>('month');
@@ -173,6 +193,8 @@ export default function ReservationsPage() {
         return { bg: 'bg-emerald-600', text: 'text-white', label: 'Confirmed' };
       case 'CHECKED_OUT':
         return { bg: 'bg-slate-500', text: 'text-white', label: 'Checked Out' };
+      case 'NO_SHOW':
+        return { bg: 'bg-amber-700', text: 'text-white', label: 'No-Show (Released / खाली)' };
       case 'CANCELLED':
         return { bg: 'bg-rose-600', text: 'text-white', label: 'Cancelled' };
       default:
@@ -314,14 +336,26 @@ export default function ReservationsPage() {
             <option value="CONFIRMED">Confirmed</option>
             <option value="CHECKED_IN">Occupied / Checked-In</option>
             <option value="CHECKED_OUT">Checked-Out</option>
+            <option value="NO_SHOW">No-Show (Released / खाली)</option>
+            <option value="CANCELLED">Cancelled</option>
           </select>
         </div>
 
-        {/* Double Booking Shield Badge & Legend */}
-        <div className="flex flex-wrap items-center gap-3 text-[11px] font-medium text-slate-600">
+        {/* Double Booking Shield & Auto No-Show Guard */}
+        <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-slate-600">
+          <button
+            onClick={handleManualSweep}
+            disabled={scanningNoShows}
+            className="flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 px-3 py-1 rounded-full font-bold transition shadow-xs cursor-pointer"
+            title="Scan and immediately release rooms for bookings whose check-in time has passed"
+          >
+            <RefreshCw size={12} className={scanningNoShows ? 'animate-spin text-amber-600' : 'text-amber-600'} />
+            <span>{scanningNoShows ? 'खाली गर्दै...' : 'Auto-Release No-Shows (कोठा खाली)'}</span>
+          </button>
+
           <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-300 text-emerald-800 px-2.5 py-0.5 rounded-full font-bold">
             <ShieldCheck size={13} className="text-emerald-600" />
-            <span>Zero-Double-Booking Shield: Active</span>
+            <span>Shield: Active</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> Occupied
@@ -330,13 +364,20 @@ export default function ReservationsPage() {
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> Confirmed
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Check-In Today
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span> Checked Out
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-700"></span> No-Show (Released)
           </div>
         </div>
       </div>
+
+      {sweepToast && (
+        <div className="p-3 bg-emerald-900 text-white text-xs font-bold rounded-2xl flex items-center justify-between shadow-lg animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+            <span>{sweepToast}</span>
+          </div>
+          <button onClick={() => setSweepToast(null)} className="text-emerald-300 hover:text-white text-xs font-mono">✕</button>
+        </div>
+      )}
 
       {/* VIEW 1: MONTH CALENDAR VIEW */}
       {viewMode === 'month' && (
@@ -472,7 +513,7 @@ export default function ReservationsPage() {
 
                       const roomBookings = reservations.filter(r => {
                         if (r.roomNumber !== room.number) return false;
-                        if (r.status === 'CANCELLED') return false;
+                        if (r.status === 'CANCELLED' || r.status === 'NO_SHOW') return false;
                         const checkIn = new Date(r.checkInDate);
                         checkIn.setHours(0, 0, 0, 0);
                         const checkOut = new Date(r.checkOutDate);
@@ -614,32 +655,62 @@ export default function ReservationsPage() {
                 <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
                   <div className="flex justify-between">
                     <span>Total Stay Charges:</span>
-                    <span className="font-bold text-slate-800">NPR {selectedRes.totalAmount.toLocaleString()}</span>
+                    <span className="font-bold text-slate-800">
+                      NPR {selectedRes.totalAmount.toLocaleString()} <span className="text-slate-500 font-normal">(${(selectedRes.totalAmount / 135).toFixed(1)} USD)</span>
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Amount Paid:</span>
-                    <span className="font-bold text-emerald-600">NPR {selectedRes.paidAmount.toLocaleString()}</span>
+                    <span className="font-bold text-emerald-600">
+                      NPR {selectedRes.paidAmount.toLocaleString()} <span className="text-emerald-700/70 font-normal">(${(selectedRes.paidAmount / 135).toFixed(1)} USD)</span>
+                    </span>
                   </div>
                   <div className="flex justify-between pt-1 border-t border-slate-200 text-xs font-black">
                     <span>Balance Due:</span>
                     <span className={selectedRes.totalAmount - selectedRes.paidAmount > 0 ? 'text-rose-600' : 'text-emerald-600'}>
-                      NPR {Math.max(0, selectedRes.totalAmount - selectedRes.paidAmount).toLocaleString()}
+                      NPR {Math.max(0, selectedRes.totalAmount - selectedRes.paidAmount).toLocaleString()} <span className="text-[11px] font-semibold">(${ (Math.max(0, selectedRes.totalAmount - selectedRes.paidAmount) / 135).toFixed(1)} USD)</span>
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Actions: Quick Check In / Check Out */}
+              {/* Actions: Quick Check In / Check Out / No-Show Release */}
+              {selectedRes.status === 'NO_SHOW' && (
+                <div className="p-3 bg-amber-50 border border-amber-300 rounded-2xl text-amber-900 text-xs flex items-center gap-2">
+                  <AlertTriangle size={16} className="text-amber-600 shrink-0" />
+                  <div>
+                    <p className="font-bold">No-Show Released (कोठा खाली भइसकेको):</p>
+                    <p className="text-[11px] text-amber-800">
+                      Guest did not arrive. Room {selectedRes.roomNumber} has been released and is AVAILABLE on the calendar for new guests.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="pt-2 flex gap-2">
                 {selectedRes.status === 'CONFIRMED' && (
-                  <button
-                    onClick={() => {
-                      openCheckInModal(selectedRes);
-                    }}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20"
-                  >
-                    <CheckCircle2 size={14} /> Arrival Check-In (Full Info)
-                  </button>
+                  <>
+                    <button
+                      onClick={() => {
+                        openCheckInModal(selectedRes);
+                      }}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20"
+                    >
+                      <CheckCircle2 size={14} /> Arrival Check-In (Full Info)
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Are you sure you want to mark ${selectedRes.guestName} as No-Show and release Room ${selectedRes.roomNumber} as AVAILABLE?`)) {
+                          releaseNoShow(selectedRes.id);
+                          setSelectedRes(null);
+                        }
+                      }}
+                      className="bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-md shadow-rose-600/20"
+                      title="Guest did not arrive. Immediately release room so other guests can book it."
+                    >
+                      <UserX size={14} /> Release (No-Show)
+                    </button>
+                  </>
                 )}
                 {selectedRes.status === 'CHECKED_IN' && (
                   <button

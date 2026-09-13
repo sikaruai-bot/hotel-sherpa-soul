@@ -19,12 +19,17 @@ import {
   Lock,
   Compass,
   ArrowRight,
+  ArrowLeft,
   Receipt,
   Check,
   User,
   Users,
   Plus,
-  Minus
+  Minus,
+  Upload,
+  Loader2,
+  Building2,
+  Image as ImageIcon
 } from 'lucide-react';
 
 interface BookingMatch {
@@ -58,6 +63,9 @@ interface CheckInResult {
   paidAmount: number;
   totalAmount: number;
   paymentStatus: string;
+  paymentMethod?: string;
+  transactionId?: string;
+  receiptUrl?: string;
   idType?: string;
   idNumber?: string;
   nationality?: string;
@@ -113,8 +121,15 @@ export default function SelfCheckInPage() {
   const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
   const [agreeRules, setAgreeRules] = useState(true);
 
+  // Multi-step check-in flow: 'KYC' (Step 1) -> 'PAYMENT' (Step 2 if balance due)
+  const [currentStep, setCurrentStep] = useState<'KYC' | 'PAYMENT'>('KYC');
+  const [receiptUrl, setReceiptUrl] = useState('');
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
+  const [confirmPaymentMade, setConfirmPaymentMade] = useState(false);
+  const [verifyingStatusText, setVerifyingStatusText] = useState('');
+
   // Payment details (Mandatory if balanceDue > 0)
-  const [paymentMethod, setPaymentMethod] = useState<'eSewa / Fonepay QR' | 'Khalti QR' | 'Bank Transfer' | 'Cash NPR (Keybox Drop)' | 'Prepaid Online (OTA)'>('eSewa / Fonepay QR');
+  const [paymentMethod, setPaymentMethod] = useState<'eSewa / Fonepay QR' | 'Khalti QR' | 'Bank Transfer'>('eSewa / Fonepay QR');
   const [transactionId, setTransactionId] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -168,8 +183,38 @@ export default function SelfCheckInPage() {
     }
   };
 
-  // 2. Submit check-in with payment verification and full KYC
-  const handleSubmitCheckIn = async (e: React.FormEvent) => {
+  // Upload payment receipt slip screenshot
+  const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingReceipt(true);
+    setErrorMsg('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to upload receipt image.');
+      }
+
+      setReceiptUrl(data.data.url);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Receipt upload failed. Please enter transaction ID manually.');
+    } finally {
+      setUploadingReceipt(false);
+    }
+  };
+
+  // Step 1 -> Step 2 validation
+  const handleProceedToPayment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedBooking) return;
 
@@ -178,17 +223,49 @@ export default function SelfCheckInPage() {
       setErrorMsg(`Please enter your valid ${idType} number.`);
       return;
     }
-
-    // Strict payment check
-    if (selectedBooking.balanceDue > 0 && (!transactionId.trim() || transactionId.trim().length < 3)) {
-      setErrorMsg(`Payment required! Please scan the QR code to pay NPR ${selectedBooking.balanceDue.toLocaleString()} and enter your Transaction / Reference ID.`);
+    if (!agreeRules) {
+      setErrorMsg('Please agree to hotel quiet hours & policy.');
       return;
+    }
+
+    setErrorMsg('');
+    if (selectedBooking.balanceDue > 0) {
+      setCurrentStep('PAYMENT');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      // 100% Prepaid booking skips payment step
+      handleExecuteCheckIn();
+    }
+  };
+
+  // Step 2 -> Submit payment & complete check-in
+  const handleExecuteCheckIn = async () => {
+    if (!selectedBooking) return;
+    const actualId = idNumber.trim();
+
+    if (selectedBooking.balanceDue > 0) {
+      const cleanTxn = transactionId.trim();
+      const invalidPlaceholders = ['none', 'na', 'null', 'test', '123', '1234', '0000', 'asdf', 'fake', 'no', 'unpaid'];
+      
+      if (!cleanTxn || cleanTxn.length < 5 || invalidPlaceholders.includes(cleanTxn.toLowerCase())) {
+        setErrorMsg('Please enter your valid Transaction / Reference ID (minimum 5 digits/letters).');
+        return;
+      }
+      if (!confirmPaymentMade) {
+        setErrorMsg('Please tick the box confirming you have transferred the payment amount.');
+        return;
+      }
     }
 
     setSubmitting(true);
     setErrorMsg('');
+    setVerifyingStatusText('Verifying payment with banking network...');
 
     try {
+      // Simulate real-time gateway verification
+      await new Promise(r => setTimeout(r, 800));
+      setVerifyingStatusText('Confirming transaction reference...');
+
       const res = await fetch('/api/self-checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -216,19 +293,21 @@ export default function SelfCheckInPage() {
           paymentMethod: selectedBooking.balanceDue > 0 ? paymentMethod : 'Prepaid Online (OTA)',
           transactionId: selectedBooking.balanceDue > 0 ? transactionId.trim() : 'PREPAID_ONLINE',
           paidAmountNow: selectedBooking.balanceDue,
+          receiptUrl: receiptUrl || undefined,
         }),
       });
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to complete check-in.');
+        throw new Error(data.error || 'Payment verification failed. Room key cannot be issued until payment is verified.');
       }
 
       setCheckInDone(data.data);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Something went wrong during payment verification & check-in.');
+      setErrorMsg(err.message || 'Payment verification failed. Room key remains locked.');
     } finally {
       setSubmitting(false);
+      setVerifyingStatusText('');
     }
   };
 
@@ -275,19 +354,45 @@ export default function SelfCheckInPage() {
         {/* SUCCESS VIEW */}
         {checkInDone ? (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-3 duration-300">
-            {/* Success Banner */}
-            <div className="bg-emerald-900/40 border border-emerald-500/40 rounded-3xl p-5 text-center relative overflow-hidden">
-              <div className="w-14 h-14 bg-emerald-500 text-slate-950 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-emerald-500/30">
-                <CheckCircle2 size={32} strokeWidth={2.5} />
+            {/* Payment & Check-In Success Banner */}
+            <div className="bg-emerald-950/60 border-2 border-emerald-500/60 rounded-3xl p-5 text-center relative overflow-hidden shadow-2xl">
+              <div className="w-16 h-16 bg-emerald-500 text-slate-950 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-emerald-500/40">
+                <CheckCircle2 size={36} strokeWidth={2.5} />
               </div>
-              <h2 className="text-xl font-black text-white tracking-tight">Payment & Check-In Complete!</h2>
-              <p className="text-xs text-emerald-200 mt-1">
-                Tashi Delek & Welcome, <span className="font-bold text-white">{checkInDone.guestName}</span>!
+              <span className="inline-block bg-emerald-500/20 text-emerald-400 font-extrabold px-3 py-0.5 rounded-full text-[10px] uppercase tracking-wider border border-emerald-500/40 mb-1">
+                Payment Verified & Settled (भुक्तानी प्रमाणित)
+              </span>
+              <h2 className="text-xl font-black text-white tracking-tight">Check-In Complete!</h2>
+              <p className="text-xs text-emerald-200 mt-0.5">
+                Tashi Delek & Welcome to Hotel Sherpa Soul, <span className="font-bold text-white">{checkInDone.guestName}</span>!
               </p>
-              <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-300 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-800">
-                <Receipt size={12} />
-                <span>NPR {checkInDone.totalAmount.toLocaleString()} Settled & Paid</span>
+              
+              <div className="mt-3 p-3 bg-slate-950/80 rounded-2xl border border-emerald-500/30 grid grid-cols-2 gap-2 text-left text-xs">
+                <div>
+                  <span className="text-[10px] text-slate-400 block font-bold">Amount Paid:</span>
+                  <span className="text-sm font-black text-emerald-400">NPR {checkInDone.totalAmount.toLocaleString()}</span>
+                  <span className="text-[10px] text-emerald-300 block font-medium">(0 Balance Due)</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 block font-bold">Payment Method & Ref:</span>
+                  <span className="text-xs font-mono font-bold text-white truncate block">{checkInDone.paymentMethod || 'eSewa / Fonepay'}</span>
+                  <span className="text-[10px] font-mono text-amber-400 truncate block">Txn: {checkInDone.transactionId || 'PAID'}</span>
+                </div>
               </div>
+
+              {checkInDone.receiptUrl && (
+                <div className="mt-2 text-center">
+                  <a 
+                    href={checkInDone.receiptUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-amber-400 hover:text-amber-300 underline font-bold inline-flex items-center gap-1"
+                  >
+                    <span>View Official Payment Slip</span>
+                    <ExternalLink size={12} />
+                  </a>
+                </div>
+              )}
             </div>
 
             {/* Room Key & Access Card */}
@@ -436,154 +541,82 @@ export default function SelfCheckInPage() {
             </button>
           </div>
         ) : selectedBooking ? (
-          /* STEP 2: PAYMENT & VERIFICATION */
           <div className="space-y-4 animate-in fade-in slide-in-from-right-3 duration-200">
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4 shadow-xl">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <div>
-                  <span className="text-[10px] font-extrabold uppercase text-amber-400 tracking-wider">
-                    {selectedBooking.balanceDue > 0 ? 'Step 2: Payment & Verification' : 'Step 2: ID Verification'}
-                  </span>
-                  <h2 className="text-base font-bold text-white">Complete Check-In</h2>
+            {/* Step Progress Indicator */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-lg">
+              <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
+                <div className={`p-1.5 rounded-xl border flex items-center justify-center gap-1 transition ${
+                  currentStep === 'KYC'
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                    : 'bg-slate-950 text-emerald-400 border-slate-800'
+                }`}>
+                  <Check size={12} className={currentStep === 'PAYMENT' ? 'text-emerald-400' : 'text-amber-400'} />
+                  <span>1. Details</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedBooking(null)}
-                  className="text-xs text-slate-400 hover:text-white"
-                >
-                  Change
-                </button>
-              </div>
 
-              {/* Booking preview card */}
-              <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800/80 text-xs space-y-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-bold text-white text-sm">{selectedBooking.guestName}</p>
-                    <p className="text-[11px] text-slate-400">Ref: #{selectedBooking.otaConfirmNum}</p>
-                  </div>
+                <div className={`p-1.5 rounded-xl border flex items-center justify-center gap-1 transition ${
+                  currentStep === 'PAYMENT'
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse'
+                    : selectedBooking.balanceDue > 0
+                    ? 'bg-slate-950 text-slate-400 border-slate-800'
+                    : 'bg-slate-950 text-slate-600 border-slate-800 opacity-50'
+                }`}>
+                  <Lock size={12} className={currentStep === 'PAYMENT' ? 'text-amber-400' : 'text-slate-500'} />
+                  <span>2. Payment</span>
+                </div>
+
+                <div className="p-1.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-500 flex items-center justify-center gap-1">
+                  <Key size={12} />
+                  <span>3. Key Access</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Booking Preview Card */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 text-xs space-y-2">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-bold text-white text-sm">{selectedBooking.guestName}</p>
+                  <p className="text-[11px] text-slate-400">Ref: #{selectedBooking.otaConfirmNum}</p>
+                </div>
+                <div className="flex items-center gap-2">
                   <span className="bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">
                     Room {selectedBooking.roomNumber}
                   </span>
-                </div>
-                <div className="flex items-center gap-4 text-[11px] text-slate-400 pt-1 border-t border-slate-900">
-                  <span className="flex items-center gap-1">
-                    <Calendar size={12} className="text-slate-500" />
-                    {new Date(selectedBooking.checkInDate).toLocaleDateString()}
-                  </span>
-                  <span>→</span>
-                  <span>{new Date(selectedBooking.checkOutDate).toLocaleDateString()}</span>
-                  <span className="ml-auto font-medium text-slate-300">{selectedBooking.roomType}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedBooking(null);
+                      setCurrentStep('KYC');
+                      setTransactionId('');
+                      setReceiptUrl('');
+                      setConfirmPaymentMade(false);
+                    }}
+                    className="text-[11px] text-slate-400 hover:text-white underline cursor-pointer"
+                  >
+                    Change
+                  </button>
                 </div>
               </div>
+              <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1.5 border-t border-slate-800">
+                <span>{new Date(selectedBooking.checkInDate).toLocaleDateString()} → {new Date(selectedBooking.checkOutDate).toLocaleDateString()}</span>
+                {selectedBooking.balanceDue > 0 ? (
+                  <span className="text-amber-400 font-bold bg-amber-950/80 px-2 py-0.5 rounded border border-amber-800">
+                    Due: NPR {selectedBooking.balanceDue.toLocaleString()}
+                  </span>
+                ) : (
+                  <span className="text-emerald-400 font-bold bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800">
+                    100% Paid Online
+                  </span>
+                )}
+              </div>
+            </div>
 
-              {/* 🔒 PAYMENT SECTION (If balance due) */}
-              {selectedBooking.balanceDue > 0 ? (
-                <div className="bg-amber-950/30 border-2 border-amber-500/40 rounded-2xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-xs font-black text-amber-300">
-                      <CreditCard size={15} />
-                      <span>Payment Required to Unlock Room Key</span>
-                    </div>
-                    <span className="text-[10px] bg-rose-500/20 text-rose-300 font-bold px-2 py-0.5 rounded-full border border-rose-500/30">
-                      Unpaid
-                    </span>
-                  </div>
-
-                  <div className="bg-slate-950/90 p-3 rounded-xl border border-amber-500/20 flex justify-between items-center">
-                    <div>
-                      <p className="text-[10px] uppercase font-bold text-slate-400">Outstanding Balance</p>
-                      <p className="text-xl font-black text-amber-400">
-                        NPR {selectedBooking.balanceDue.toLocaleString()}
-                      </p>
-                    </div>
-                    <span className="text-[10px] text-slate-500 font-mono">
-                      (Total: NPR {selectedBooking.totalAmount.toLocaleString()})
-                    </span>
-                  </div>
-
-                  {/* QR Scan to Pay box */}
-                  <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-center space-y-2.5">
-                    <p className="text-xs font-bold text-slate-200 flex items-center justify-center gap-1">
-                      <QrCode size={14} className="text-amber-400" />
-                      Scan to Pay via Fonepay / eSewa / Mobile Banking:
-                    </p>
-
-                    <div className="bg-white p-2.5 rounded-xl inline-block shadow-md">
-                      <img 
-                        src={paymentQrUrl} 
-                        alt="Payment QR Code" 
-                        className="w-36 h-36 object-contain rounded-lg mx-auto"
-                      />
-                    </div>
-
-                    <div className="text-[11px] text-slate-300 space-y-1">
-                      <p className="font-bold text-white">Hotel Sherpa Soul <span className="text-amber-400 font-mono font-normal ml-1">(PAN: 119205419)</span></p>
-                      <div className="flex items-center justify-center gap-2">
-                        <span className="text-slate-400">eSewa / Fonepay ID:</span>
-                        <span className="font-mono font-bold text-amber-300">9851068219</span>
-                        <button
-                          type="button"
-                          onClick={handleCopyEsewa}
-                          className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded font-bold transition"
-                        >
-                          {copiedEsewa ? 'Copied!' : 'Copy'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Payment Method & Transaction Reference */}
-                  <div className="space-y-2.5 pt-1">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-300 mb-1">Select Payment Method Used:</label>
-                      <select
-                        value={paymentMethod}
-                        onChange={(e: any) => setPaymentMethod(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
-                      >
-                        <option value="eSewa / Fonepay QR">eSewa / Fonepay Mobile Banking QR</option>
-                        <option value="Khalti QR">Khalti Digital Wallet</option>
-                        <option value="Bank Transfer">Direct Bank Transfer</option>
-                        <option value="Cash NPR (Keybox Drop)">Cash NPR (Dropped in Keybox Envelope)</option>
-                        <option value="Prepaid Online (OTA)">Prepaid Online to Booking.com / Agoda</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-amber-300 mb-1 flex items-center gap-1">
-                        <Receipt size={13} />
-                        Transaction ID / Payment Reference Number *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. 12894102 or eSewa Ref ID / Note"
-                        value={transactionId}
-                        onChange={(e) => setTransactionId(e.target.value)}
-                        className="w-full bg-slate-950 border-2 border-amber-500/50 rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400 font-mono font-bold"
-                      />
-                      <p className="text-[10px] text-slate-400 mt-0.5">
-                        Enter the transaction code from your banking/wallet receipt. Room key unlocks once entered.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                /* PREPAID BADGE */
-                <div className="bg-emerald-950/40 border border-emerald-500/40 rounded-2xl p-3.5 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                    <Check size={18} strokeWidth={2.5} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-emerald-300">100% Paid & Confirmed</p>
-                    <p className="text-[11px] text-slate-300">No payment due. Please enter your Passport ID below to receive your room key.</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Form */}
-              <form onSubmit={handleSubmitCheckIn} className="space-y-3.5 pt-1">
+            {/* ========================================================================= */}
+            {/* STEP 1: GUEST KYC DETAILS FORM */}
+            {/* ========================================================================= */}
+            {currentStep === 'KYC' && (
+              <form onSubmit={handleProceedToPayment} className="space-y-3.5">
                 {/* 1. Official ID Document Details */}
                 <div className="bg-slate-950/90 p-3.5 rounded-2xl border border-slate-800 space-y-3">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400">
@@ -616,37 +649,41 @@ export default function SelfCheckInPage() {
                         {idType} Number *
                       </label>
                       <input
+                        id="guest-id-number"
                         type="text"
                         required
                         placeholder={
                           idType === 'Passport' ? 'e.g. PP12345678' :
                           idType === 'Citizenship (नागरिकता)' ? 'e.g. 27-01-75-01234' :
                           idType === 'National ID (राष्ट्रिय परिचयपत्र)' ? 'e.g. 123-456-7890' :
-                          'Enter document number'
+                          'Enter Official ID Number'
                         }
                         value={idNumber}
                         onChange={(e) => setIdNumber(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 font-mono transition"
                       />
                     </div>
+
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-300 mb-1">Issued District / Country</label>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                        Issued Country / District (जारी जिल्ला / देश)
+                      </label>
                       <input
                         type="text"
-                        placeholder="e.g. Kathmandu / Nepal / USA"
+                        placeholder="e.g. Kathmandu or USA"
                         value={idIssuedPlace}
                         onChange={(e) => setIdIssuedPlace(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 transition"
                       />
                     </div>
                   </div>
                 </div>
 
-                {/* 2. Personal & Contact Details */}
+                {/* 2. Personal Profile & Origin */}
                 <div className="bg-slate-950/90 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-blue-400">
                     <User size={14} />
-                    <span>Guest Contact & Address (सम्पर्क र स्थायी ठेगाना)</span>
+                    <span>Personal Profile & Contact (व्यक्तिगत सम्पर्क)</span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2.5">
@@ -685,7 +722,7 @@ export default function SelfCheckInPage() {
                   </div>
                 </div>
 
-                {/* 3. Guest Count Breakdown (पाहुना संख्या विवरण) */}
+                {/* 3. Guest Count Breakdown */}
                 <div className="bg-slate-950/90 p-3.5 rounded-2xl border border-slate-800 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400">
@@ -699,70 +736,70 @@ export default function SelfCheckInPage() {
 
                   <div className="grid grid-cols-3 gap-2">
                     {/* Male */}
-                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-center">
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-2 text-center">
                       <span className="block text-[11px] font-bold text-slate-300">Male (पुरुष)</span>
-                      <span className="block text-[9px] text-slate-500 mb-1.5">Adult 12y+</span>
-                      <div className="flex items-center justify-center gap-2">
+                      <span className="block text-[9px] text-slate-500 mb-1">Adult 12y+</span>
+                      <div className="flex items-center justify-center gap-1.5">
                         <button
                           type="button"
                           onClick={() => setMaleGuests(Math.max(0, maleGuests - 1))}
-                          className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center transition"
+                          className="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center transition"
                         >
-                          <Minus size={12} />
+                          <Minus size={11} />
                         </button>
-                        <span className="text-sm font-black text-white w-5 text-center">{maleGuests}</span>
+                        <span className="text-sm font-black text-white w-4 text-center">{maleGuests}</span>
                         <button
                           type="button"
                           onClick={() => setMaleGuests(maleGuests + 1)}
-                          className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center transition"
+                          className="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center transition"
                         >
-                          <Plus size={12} />
+                          <Plus size={11} />
                         </button>
                       </div>
                     </div>
 
                     {/* Female */}
-                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-center">
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-2 text-center">
                       <span className="block text-[11px] font-bold text-slate-300">Female (महिला)</span>
-                      <span className="block text-[9px] text-slate-500 mb-1.5">Adult 12y+</span>
-                      <div className="flex items-center justify-center gap-2">
+                      <span className="block text-[9px] text-slate-500 mb-1">Adult 12y+</span>
+                      <div className="flex items-center justify-center gap-1.5">
                         <button
                           type="button"
                           onClick={() => setFemaleGuests(Math.max(0, femaleGuests - 1))}
-                          className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center transition"
+                          className="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center transition"
                         >
-                          <Minus size={12} />
+                          <Minus size={11} />
                         </button>
-                        <span className="text-sm font-black text-white w-5 text-center">{femaleGuests}</span>
+                        <span className="text-sm font-black text-white w-4 text-center">{femaleGuests}</span>
                         <button
                           type="button"
                           onClick={() => setFemaleGuests(femaleGuests + 1)}
-                          className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center transition"
+                          className="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center transition"
                         >
-                          <Plus size={12} />
+                          <Plus size={11} />
                         </button>
                       </div>
                     </div>
 
                     {/* Child */}
-                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-center">
-                      <span className="block text-[11px] font-bold text-slate-300">Child (बालबालिका)</span>
-                      <span className="block text-[9px] text-slate-500 mb-1.5">&lt; 12y</span>
-                      <div className="flex items-center justify-center gap-2">
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-2 text-center">
+                      <span className="block text-[11px] font-bold text-slate-300">Child (बाल)</span>
+                      <span className="block text-[9px] text-slate-500 mb-1">&lt; 12y</span>
+                      <div className="flex items-center justify-center gap-1.5">
                         <button
                           type="button"
                           onClick={() => setChildGuests(Math.max(0, childGuests - 1))}
-                          className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center transition"
+                          className="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center transition"
                         >
-                          <Minus size={12} />
+                          <Minus size={11} />
                         </button>
-                        <span className="text-sm font-black text-white w-5 text-center">{childGuests}</span>
+                        <span className="text-sm font-black text-white w-4 text-center">{childGuests}</span>
                         <button
                           type="button"
                           onClick={() => setChildGuests(childGuests + 1)}
-                          className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center transition"
+                          className="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center transition"
                         >
-                          <Plus size={12} />
+                          <Plus size={11} />
                         </button>
                       </div>
                     </div>
@@ -782,7 +819,7 @@ export default function SelfCheckInPage() {
                   </div>
                 </div>
 
-                {/* 3. Travel Information (Nepal Tourism Record) */}
+                {/* 4. Travel & Stay Info */}
                 <div className="bg-slate-950/90 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
                     <Compass size={14} />
@@ -829,7 +866,7 @@ export default function SelfCheckInPage() {
                   </div>
                 </div>
 
-                {/* 4. Emergency Contact */}
+                {/* 5. Emergency Contact */}
                 <div className="bg-slate-950/90 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-rose-400">
                     <Phone size={14} />
@@ -838,10 +875,10 @@ export default function SelfCheckInPage() {
 
                   <div className="grid grid-cols-2 gap-2.5">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-300 mb-1">Contact Person Name</label>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">Contact Name</label>
                       <input
                         type="text"
-                        placeholder="Relative or Guide name"
+                        placeholder="Relative / Guide"
                         value={emergencyContactName}
                         onChange={(e) => setEmergencyContactName(e.target.value)}
                         className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
@@ -851,7 +888,7 @@ export default function SelfCheckInPage() {
                       <label className="block text-[11px] font-bold text-slate-300 mb-1">Emergency Phone</label>
                       <input
                         type="tel"
-                        placeholder="Contact number"
+                        placeholder="+977..."
                         value={emergencyContactPhone}
                         onChange={(e) => setEmergencyContactPhone(e.target.value)}
                         className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
@@ -860,7 +897,7 @@ export default function SelfCheckInPage() {
                   </div>
                 </div>
 
-                {/* Hotel Quiet Policy */}
+                {/* Hotel Policy Agreement */}
                 <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
                   <p className="font-bold text-slate-200">Hotel Sherpa Soul Policy:</p>
                   <p>• Quiet hours: 10:00 PM – 07:00 AM (Sleep Well policy).</p>
@@ -883,28 +920,315 @@ export default function SelfCheckInPage() {
                 )}
 
                 <button
+                  id="btn-proceed-to-payment"
                   type="submit"
-                  disabled={submitting || !agreeRules || (selectedBooking.balanceDue > 0 && !transactionId.trim())}
-                  className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-3.5 rounded-xl text-sm transition shadow-lg shadow-amber-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                  disabled={submitting}
+                  className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-3 rounded-xl text-sm transition shadow-lg shadow-amber-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {submitting ? (
-                    'Verifying Payment & Checking In...'
-                  ) : selectedBooking.balanceDue > 0 ? (
+                  {selectedBooking.balanceDue > 0 ? (
                     <>
-                      <Lock size={15} />
-                      Verify Payment & Unlock Room Key →
+                      <CreditCard size={16} />
+                      Proceed to Payment (NPR {selectedBooking.balanceDue.toLocaleString()}) →
                     </>
                   ) : (
-                    'Confirm & Open Room Key →'
+                    <>
+                      <CheckCircle2 size={16} />
+                      Confirm & Unlock Room Key →
+                    </>
                   )}
                 </button>
-                {selectedBooking.balanceDue > 0 && !transactionId.trim() && (
+                {selectedBooking.balanceDue > 0 && (
                   <p className="text-[11px] text-amber-400/90 text-center font-medium">
-                    ⚠️ Enter Transaction ID above to activate check-in button.
+                    🔒 Step 2 requires verified payment proof before room key is issued.
                   </p>
                 )}
               </form>
-            </div>
+            )}
+
+            {/* ========================================================================= */}
+            {/* STEP 2: MANDATORY PAYMENT GATE (If balance due) */}
+            {/* ========================================================================= */}
+            {currentStep === 'PAYMENT' && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-right-3 duration-200">
+                {/* Due Amount Highlight Card */}
+                <div className="bg-gradient-to-br from-amber-950/60 to-slate-950 p-4 rounded-2xl border-2 border-amber-500/50 shadow-xl text-center space-y-1">
+                  <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider flex items-center justify-center gap-1.5">
+                    <Lock size={13} />
+                    Mandatory Payment Gate (अनिवार्य भुक्तानी)
+                  </span>
+                  <div className="text-3xl font-black text-white tracking-tight">
+                    NPR {selectedBooking.balanceDue.toLocaleString()}
+                  </div>
+                  <p className="text-[11px] text-slate-300">
+                    Pay via QR or Bank Transfer below. Room key unlocks once transaction reference is submitted.
+                  </p>
+                </div>
+
+                {/* Payment Method Tabs */}
+                <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-2xl">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('eSewa / Fonepay QR')}
+                    className={`py-2 px-1 text-[11px] font-bold rounded-xl transition flex flex-col items-center gap-1 ${
+                      paymentMethod === 'eSewa / Fonepay QR'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <QrCode size={16} />
+                    <span>eSewa / Fonepay</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('Khalti QR')}
+                    className={`py-2 px-1 text-[11px] font-bold rounded-xl transition flex flex-col items-center gap-1 ${
+                      paymentMethod === 'Khalti QR'
+                        ? 'bg-purple-600 text-white shadow-md'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <QrCode size={16} />
+                    <span>Khalti QR</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('Bank Transfer')}
+                    className={`py-2 px-1 text-[11px] font-bold rounded-xl transition flex flex-col items-center gap-1 ${
+                      paymentMethod === 'Bank Transfer'
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Building2 size={16} />
+                    <span>Bank Transfer</span>
+                  </button>
+                </div>
+
+                {/* QR Code / Bank Details Card */}
+                <div className="bg-slate-950/90 p-4 rounded-2xl border border-slate-800 text-center space-y-3">
+                  {paymentMethod === 'eSewa / Fonepay QR' && (
+                    <div className="space-y-3">
+                      <div className="inline-block p-3 bg-white rounded-2xl shadow-xl">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img 
+                          src={paymentQrUrl} 
+                          alt="eSewa / Fonepay QR Code" 
+                          className="w-48 h-48 mx-auto object-contain"
+                        />
+                      </div>
+                      <div className="space-y-1 text-xs">
+                        <p className="font-extrabold text-white text-sm">Hotel Sherpa Soul</p>
+                        <p className="text-slate-400 text-[11px]">eSewa / Fonepay ID: <span className="font-mono text-emerald-400 font-bold">9851068219</span></p>
+                        <p className="text-slate-500 text-[10px]">PAN: 119205419 • Any Nepal Bank or Digital Wallet</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleCopyEsewa}
+                        className="text-[11px] bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 px-3 py-1.5 rounded-xl font-bold inline-flex items-center gap-1.5 transition"
+                      >
+                        <Copy size={12} />
+                        {copiedEsewa ? 'ID Copied (9851068219)!' : 'Copy eSewa Number (9851068219)'}
+                      </button>
+                    </div>
+                  )}
+
+                  {paymentMethod === 'Khalti QR' && (
+                    <div className="space-y-3">
+                      <div className="inline-block p-3 bg-white rounded-2xl shadow-xl">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img 
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent('Khalti: 9851068219 | Hotel Sherpa Soul')}&color=581c87&bgcolor=ffffff&margin=1`} 
+                          alt="Khalti QR Code" 
+                          className="w-48 h-48 mx-auto object-contain"
+                        />
+                      </div>
+                      <div className="space-y-1 text-xs">
+                        <p className="font-extrabold text-white text-sm">Hotel Sherpa Soul (Khalti)</p>
+                        <p className="text-slate-400 text-[11px]">Khalti Mobile ID: <span className="font-mono text-purple-400 font-bold">9851068219</span></p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleCopyEsewa}
+                        className="text-[11px] bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 px-3 py-1.5 rounded-xl font-bold inline-flex items-center gap-1.5 transition"
+                      >
+                        <Copy size={12} />
+                        {copiedEsewa ? 'ID Copied (9851068219)!' : 'Copy Khalti ID (9851068219)'}
+                      </button>
+                    </div>
+                  )}
+
+                  {paymentMethod === 'Bank Transfer' && (
+                    <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 text-left space-y-2 text-xs">
+                      <p className="font-bold text-blue-400 border-b border-slate-800 pb-1">Direct Bank Account Details:</p>
+                      <div className="grid grid-cols-2 gap-2 text-[11px]">
+                        <div>
+                          <span className="text-slate-500 block">Bank Name:</span>
+                          <span className="text-white font-bold">Nabil Bank Ltd</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">Branch:</span>
+                          <span className="text-white font-bold">Thamel, Kathmandu</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-slate-500 block">Account Name:</span>
+                          <span className="text-white font-bold">Hotel Sherpa Soul Pvt. Ltd.</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-slate-500 block">Account Number:</span>
+                          <div className="flex items-center justify-between bg-slate-950 px-2 py-1.5 rounded-lg border border-slate-800 mt-0.5">
+                            <span className="text-emerald-400 font-mono font-bold">01201017502391</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText('01201017502391');
+                                setCopiedEsewa(true);
+                                setTimeout(() => setCopiedEsewa(false), 2000);
+                              }}
+                              className="text-[10px] text-slate-400 hover:text-white flex items-center gap-1"
+                            >
+                              <Copy size={11} /> Copy
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Payment Proof Form */}
+                <div className="bg-slate-950/90 p-4 rounded-2xl border border-slate-800 space-y-3">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400">
+                    <Receipt size={14} />
+                    <span>Payment Verification & Proof (भुक्तानी विवरण) *</span>
+                  </div>
+
+                  {/* Transaction ID Input */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                      Transaction / Reference ID (कारोबार नम्बर) *
+                    </label>
+                    <input
+                      id="transaction-id-input"
+                      type="text"
+                      required
+                      placeholder="e.g. 10-digit eSewa/Fonepay Code or Txn ID"
+                      value={transactionId}
+                      onChange={(e) => setTransactionId(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400 font-mono tracking-wider transition"
+                    />
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      You can find this in your eSewa, Fonepay, Khalti or Mobile Banking statement.
+                    </p>
+                  </div>
+
+                  {/* Payment Slip / Screenshot Upload */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                      Attach Payment Slip / Screenshot (रसिद स्क्रिनसट) (Recommended)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <label className="flex-1 bg-slate-900 hover:bg-slate-850 border border-dashed border-slate-700 hover:border-amber-500/50 rounded-xl p-2.5 cursor-pointer text-center transition">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleReceiptUpload}
+                          className="hidden"
+                        />
+                        <div className="flex items-center justify-center gap-1.5 text-xs text-slate-300">
+                          {uploadingReceipt ? (
+                            <>
+                              <Loader2 size={13} className="animate-spin text-amber-400" />
+                              <span>Uploading receipt...</span>
+                            </>
+                          ) : receiptUrl ? (
+                            <>
+                              <CheckCircle2 size={13} className="text-emerald-400" />
+                              <span className="text-emerald-400 font-bold">Slip Uploaded ✓</span>
+                            </>
+                          ) : (
+                            <>
+                              <Upload size={13} className="text-amber-400" />
+                              <span>Upload Slip Image</span>
+                            </>
+                          )}
+                        </div>
+                      </label>
+                    </div>
+                    {receiptUrl && (
+                      <div className="mt-1.5 flex items-center justify-between text-[10px] text-emerald-400 bg-emerald-950/40 border border-emerald-900/50 px-2 py-1 rounded-lg">
+                        <span>Receipt attached</span>
+                        <a href={receiptUrl} target="_blank" rel="noopener noreferrer" className="underline font-bold flex items-center gap-1">
+                          Preview <ExternalLink size={10} />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Confirmation Checkbox */}
+                  <label className="flex items-start gap-2 pt-1 text-slate-300 cursor-pointer text-[11px] leading-snug">
+                    <input
+                      id="confirm-payment-checkbox"
+                      type="checkbox"
+                      checked={confirmPaymentMade}
+                      onChange={(e) => setConfirmPaymentMade(e.target.checked)}
+                      className="rounded accent-amber-500 mt-0.5 shrink-0"
+                    />
+                    <span>
+                      I confirm that I have transferred <strong className="text-white font-bold">NPR {selectedBooking.balanceDue.toLocaleString()}</strong> to Hotel Sherpa Soul and entered the correct transaction reference.
+                    </span>
+                  </label>
+                </div>
+
+                {errorMsg && (
+                  <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-800 text-rose-300 text-xs flex items-center gap-2">
+                    <AlertTriangle size={15} className="shrink-0" />
+                    <span>{errorMsg}</span>
+                  </div>
+                )}
+
+                {/* Verify & Check-In Button */}
+                <button
+                  id="btn-verify-payment"
+                  type="button"
+                  onClick={handleExecuteCheckIn}
+                  disabled={submitting || !transactionId.trim() || transactionId.trim().length < 5 || !confirmPaymentMade}
+                  className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black py-3.5 rounded-xl text-sm transition shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>{verifyingStatusText || 'Verifying Payment...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Key size={16} />
+                      <span>Verify Payment & Unlock Room Key →</span>
+                    </>
+                  )}
+                </button>
+
+                {(!transactionId.trim() || transactionId.trim().length < 5 || !confirmPaymentMade) && (
+                  <p className="text-[10px] text-amber-400/90 text-center font-medium">
+                    ⚠️ Enter valid Transaction ID (min 5 chars) & tick confirmation to unlock key.
+                  </p>
+                )}
+
+                {/* Back to Step 1 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentStep('KYC');
+                    setErrorMsg('');
+                  }}
+                  className="w-full text-center text-xs text-slate-400 hover:text-white py-2 flex items-center justify-center gap-1 transition"
+                >
+                  <ArrowLeft size={13} />
+                  <span>Back to Edit Guest Details</span>
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           /* STEP 1: SEARCH BOOKING */

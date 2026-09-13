@@ -23,13 +23,14 @@ import {
   User,
   Check,
   Key,
-  Users
+  Users,
+  UserX
 } from 'lucide-react';
 import { usePms, Reservation, GuestIdType, PurposeOfVisitType } from '@/context/PmsContext';
 import SelfCheckinQrModal from '@/components/SelfCheckinQrModal';
 
 export default function FrontDeskPage() {
-  const { reservations, checkInGuest, checkOutGuest, createInvoice } = usePms();
+  const { reservations, checkInGuest, checkOutGuest, createInvoice, releaseNoShow } = usePms();
 
   // Full Check-In Modal State
   const [selectedResForCheckIn, setSelectedResForCheckIn] = useState<Reservation | null>(null);
@@ -246,13 +247,26 @@ export default function FrontDeskPage() {
                   </div>
 
                   <div className="flex gap-2">
-                    {res.status !== 'CHECKED_IN' ? (
-                      <button 
-                        onClick={() => openCheckInModal(res)}
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm hover:scale-[1.01]"
-                      >
-                        <CheckCircle size={15} /> Arrival Check-In (Full Info)
-                      </button>
+                    {res.status === 'CONFIRMED' ? (
+                      <div className="flex gap-2 w-full">
+                        <button 
+                          onClick={() => openCheckInModal(res)}
+                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm hover:scale-[1.01]"
+                        >
+                          <CheckCircle size={15} /> Arrival Check-In (Full Info)
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Are you sure you want to mark ${res.guestName} as No-Show and release Room ${res.roomNumber} as AVAILABLE?`)) {
+                              releaseNoShow(res.id);
+                            }
+                          }}
+                          className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
+                          title="Guest did not arrive. Immediately release room so other guests can book it."
+                        >
+                          <UserX size={14} /> Release Room (No-Show)
+                        </button>
+                      </div>
                     ) : (
                       <div className="flex gap-2 w-full">
                         <button 
@@ -904,11 +918,15 @@ export default function FrontDeskPage() {
             <div className="flex justify-between items-center bg-blue-50/70 p-3.5 rounded-2xl border border-blue-200 text-xs">
               <div>
                 <span className="text-slate-500 block">Total Stay Folio</span>
-                <span className="text-base font-black text-slate-900">NPR {selectedResForDetails.totalAmount.toLocaleString()}</span>
+                <span className="text-base font-black text-slate-900">
+                  NPR {selectedResForDetails.totalAmount.toLocaleString()} <span className="text-xs font-semibold text-slate-500">(${(selectedResForDetails.totalAmount / 135).toFixed(1)} USD)</span>
+                </span>
               </div>
               <div className="text-right">
                 <span className="text-slate-500 block">Settled Amount</span>
-                <span className="text-base font-black text-emerald-600">NPR {selectedResForDetails.paidAmount.toLocaleString()}</span>
+                <span className="text-base font-black text-emerald-600">
+                  NPR {selectedResForDetails.paidAmount.toLocaleString()} <span className="text-xs font-semibold text-emerald-700/70">(${(selectedResForDetails.paidAmount / 135).toFixed(1)} USD)</span>
+                </span>
               </div>
             </div>
 
@@ -981,7 +999,7 @@ export default function FrontDeskPage() {
                 <div className="flex justify-between text-sm font-extrabold text-slate-900 pt-2 border-t border-slate-200">
                   <span>Total Due to Settle:</span>
                   <span className="text-rose-600">
-                    NPR {(Math.max(0, selectedResForCheckOut.totalAmount - selectedResForCheckOut.paidAmount) + extraCharges).toLocaleString()}
+                    NPR {(Math.max(0, selectedResForCheckOut.totalAmount - selectedResForCheckOut.paidAmount) + extraCharges).toLocaleString()} <span className="text-xs font-bold text-slate-500">(${((Math.max(0, selectedResForCheckOut.totalAmount - selectedResForCheckOut.paidAmount) + extraCharges) / 135).toFixed(1)} USD)</span>
                   </span>
                 </div>
               </div>

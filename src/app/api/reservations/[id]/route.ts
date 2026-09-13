@@ -187,6 +187,34 @@ export async function PATCH(
         guestName: reservation.guest.name,
         roomNumber: reservation.room.roomNumber,
       });
+    } else if (status === 'NO_SHOW' || status === 'CANCELLED') {
+      // Revert room to AVAILABLE so calendar and other guests can immediately book it
+      await prisma.room.update({
+        where: { id: reservation.roomId },
+        data: {
+          status: RoomStatus.AVAILABLE,
+          currentGuest: null,
+        },
+      });
+
+      await prisma.notification.create({
+        data: {
+          title: status === 'NO_SHOW' 
+            ? `No-Show Released: Room ${reservation.room.roomNumber}` 
+            : `Reservation Cancelled: Room ${reservation.room.roomNumber}`,
+          detail: `Reservation for ${reservation.guest.name} was ${status === 'NO_SHOW' ? 'marked as No-Show' : 'cancelled'}. Room ${reservation.room.roomNumber} is now AVAILABLE on the calendar.`,
+          type: 'Booking',
+          channel: 'In-App',
+          status: 'Delivered',
+        },
+      });
+
+      await emitPmsEvent('reservation.no_show', {
+        reservationId: id,
+        guestName: reservation.guest.name,
+        roomNumber: reservation.room.roomNumber,
+        action: status,
+      });
     }
 
     return NextResponse.json({ success: true, data: updatedRes });
