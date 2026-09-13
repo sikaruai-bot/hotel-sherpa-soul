@@ -69,6 +69,7 @@ export default function FrontDeskPage() {
   const [selectedResForCheckOut, setSelectedResForCheckOut] = useState<Reservation | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'eSewa' | 'Khalti' | 'Cash NPR' | 'Cash USD' | 'Visa'>('eSewa');
   const [extraCharges, setExtraCharges] = useState(0);
+  const [checkOutPayAmount, setCheckOutPayAmount] = useState<number | null>(null);
 
   const [luggageNotes, setLuggageNotes] = useState<string[]>(['Sarah Connor (Room 202) - 2 Backpacks stored in reception closet.']);
   const [newLuggageText, setNewLuggageText] = useState('');
@@ -179,8 +180,12 @@ export default function FrontDeskPage() {
   const handleConfirmCheckOut = () => {
     if (!selectedResForCheckOut) return;
     const remainingBalance = Math.max(0, selectedResForCheckOut.totalAmount - selectedResForCheckOut.paidAmount) + extraCharges;
+    const amountPaidNow = checkOutPayAmount !== null ? checkOutPayAmount : remainingBalance;
+    const totalPaid = selectedResForCheckOut.paidAmount + amountPaidNow;
+    const grandTotal = selectedResForCheckOut.totalAmount + extraCharges;
+    const isFullyPaid = totalPaid >= grandTotal && grandTotal > 0;
     
-    // Auto-create invoice
+    // Auto-create invoice with accurate paid amount and due status
     createInvoice({
       reservationId: selectedResForCheckOut.id,
       invoiceDate: new Date().toISOString().split('T')[0],
@@ -191,22 +196,23 @@ export default function FrontDeskPage() {
         { description: `Room Stay: ${selectedResForCheckOut.roomType}`, quantity: 1, unitPrice: selectedResForCheckOut.totalAmount, total: selectedResForCheckOut.totalAmount },
         ...(extraCharges > 0 ? [{ description: 'Incidental / Kitchen / Laundry charges', quantity: 1, unitPrice: extraCharges, total: extraCharges }] : [])
       ],
-      subtotal: selectedResForCheckOut.totalAmount + extraCharges,
+      subtotal: grandTotal,
       taxAmount: 0,
       serviceCharge: 0,
       discount: 0,
-      grandTotal: selectedResForCheckOut.totalAmount + extraCharges,
-      paidAmount: selectedResForCheckOut.totalAmount + extraCharges,
-      paymentMethod: paymentMethod as any,
-      status: 'PAID',
+      grandTotal: grandTotal,
+      paidAmount: totalPaid,
+      paymentMethod: amountPaidNow > 0 ? (paymentMethod as any) : (selectedResForCheckOut.paidAmount > 0 ? 'Cash NPR' : undefined),
+      status: isFullyPaid ? 'PAID' : (totalPaid > 0 ? 'PARTIAL' : 'UNPAID'),
     });
 
     checkOutGuest(selectedResForCheckOut.id, {
       method: paymentMethod as any,
-      amount: remainingBalance,
+      amount: amountPaidNow,
     });
 
     setSelectedResForCheckOut(null);
+    setCheckOutPayAmount(null);
   };
 
   return (
@@ -1131,11 +1137,34 @@ export default function FrontDeskPage() {
                   />
                 </div>
                 <div className="flex justify-between text-sm font-extrabold text-slate-900 pt-2 border-t border-slate-200">
-                  <span>Total Due to Settle:</span>
+                  <span>Total Net Payable:</span>
                   <span className="text-rose-600">
                     NPR {(Math.max(0, selectedResForCheckOut.totalAmount - selectedResForCheckOut.paidAmount) + extraCharges).toLocaleString()} <span className="text-xs font-bold text-slate-500">(${((Math.max(0, selectedResForCheckOut.totalAmount - selectedResForCheckOut.paidAmount) + extraCharges) / 135).toFixed(1)} USD)</span>
                   </span>
                 </div>
+
+                {/* Amount collected today (Partial payment support) */}
+                <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+                  <span className="font-bold text-slate-700">Amount Paying Now (अहिले बुझाएको रकम):</span>
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1 font-bold text-slate-400 text-xs">रू.</span>
+                    <input 
+                      type="number" 
+                      min="0"
+                      max={Math.max(0, selectedResForCheckOut.totalAmount - selectedResForCheckOut.paidAmount) + extraCharges}
+                      value={checkOutPayAmount !== null ? checkOutPayAmount : (Math.max(0, selectedResForCheckOut.totalAmount - selectedResForCheckOut.paidAmount) + extraCharges)}
+                      onChange={e => setCheckOutPayAmount(Math.max(0, Number(e.target.value)))}
+                      className="w-32 pl-8 pr-2 py-1 border border-slate-300 rounded-lg text-right font-black text-sm outline-none focus:ring-2 focus:ring-purple-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Live remaining due notice */}
+                {(Math.max(0, selectedResForCheckOut.totalAmount - selectedResForCheckOut.paidAmount) + extraCharges) - (checkOutPayAmount !== null ? checkOutPayAmount : (Math.max(0, selectedResForCheckOut.totalAmount - selectedResForCheckOut.paidAmount) + extraCharges)) > 0 && (
+                  <div className="p-2 bg-amber-50 border border-amber-300 rounded-lg text-amber-950 font-bold text-[11px]">
+                    ⚠️ आंशिक भुक्तानी: बाँकी बक्यौता रकम <strong>रू. {((Math.max(0, selectedResForCheckOut.totalAmount - selectedResForCheckOut.paidAmount) + extraCharges) - (checkOutPayAmount !== null ? checkOutPayAmount : (Math.max(0, selectedResForCheckOut.totalAmount - selectedResForCheckOut.paidAmount) + extraCharges))).toLocaleString()}</strong> पाहुनाको खातामा PARTIAL बक्यौताको रूपमा सुरक्षित रहनेछ।
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1.5">

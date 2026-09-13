@@ -230,6 +230,12 @@ interface PmsContextType {
     updates: Partial<Invoice>
   ) => Promise<void>;
   recordPayment: (invoiceId: string, amount: number, method: Invoice['paymentMethod']) => void;
+  recordAdvancePayment: (
+    reservationId: string,
+    amount: number,
+    method?: string,
+    note?: string
+  ) => Promise<void>;
   releaseNoShow: (reservationId: string, reason?: string) => void;
   scanAndReleaseNoShows: (cutOffHour?: number) => Promise<{ releasedCount: number }>;
   toggleStopSell: () => void;
@@ -1213,8 +1219,10 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const recordPayment = (invoiceId: string, amount: number, method: Invoice['paymentMethod']) => {
+    let linkedReservationId: string | undefined;
     const updated = invoices.map(inv => {
       if (inv.id === invoiceId) {
+        linkedReservationId = inv.reservationId;
         const newPaid = inv.paidAmount + amount;
         return {
           ...inv,
@@ -1226,6 +1234,34 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return inv;
     });
     setInvoices(updated);
+
+    let updatedReservations = reservations;
+    if (linkedReservationId) {
+      updatedReservations = reservations.map(r => {
+        if (r.id === linkedReservationId) {
+          return {
+            ...r,
+            paidAmount: (r.paidAmount || 0) + amount,
+          };
+        }
+        return r;
+      });
+      setReservations(updatedReservations);
+    }
+
+    persist({
+      rooms,
+      reservations: updatedReservations,
+      contracts,
+      kitchenUsers,
+      kitchenIncidents,
+      gasLevel,
+      housekeepingTasks,
+      maintenanceTickets,
+      invoices: updated,
+      notifications,
+      stopSellActive,
+    });
 
     // Background sync to API
     fetch(`/api/billing/${invoiceId}/payment`, {
@@ -1321,6 +1357,68 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     } catch (err) {
       console.warn('Sync update invoice error:', err);
+    }
+  };
+
+  const recordAdvancePayment = async (
+    reservationId: string,
+    amount: number,
+    method: string = 'Cash NPR',
+    note?: string
+  ) => {
+    let targetRoom = '';
+    let guest = '';
+    let newPaidTotal = 0;
+
+    const updatedReservations = reservations.map(r => {
+      if (r.id === reservationId) {
+        targetRoom = r.roomNumber;
+        guest = r.guestName;
+        newPaidTotal = (r.paidAmount || 0) + Number(amount);
+        return {
+          ...r,
+          paidAmount: newPaidTotal,
+        };
+      }
+      return r;
+    });
+
+    setReservations(updatedReservations);
+
+    const newNotif: NotificationItem = {
+      id: `NOTIF-${Date.now()}`,
+      title: `Advance Deposit: Room ${targetRoom}`,
+      detail: `Received advance NPR ${Number(amount).toLocaleString()} from ${guest} via ${method}. Total deposit: NPR ${newPaidTotal.toLocaleString()}.${note ? ` Note: ${note}` : ''}`,
+      timestamp: 'Just now',
+      type: 'Billing',
+      channel: 'In-App',
+      status: 'Delivered',
+    };
+    const updatedNotifs = [newNotif, ...notifications];
+    setNotifications(updatedNotifs);
+
+    persist({
+      rooms,
+      reservations: updatedReservations,
+      contracts,
+      kitchenUsers,
+      kitchenIncidents,
+      gasLevel,
+      housekeepingTasks,
+      maintenanceTickets,
+      invoices,
+      notifications: updatedNotifs,
+      stopSellActive,
+    });
+
+    try {
+      await fetch(`/api/reservations/${reservationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paidAmount: newPaidTotal }),
+      });
+    } catch (err) {
+      console.warn('Sync advance payment error:', err);
     }
   };
 
@@ -1451,6 +1549,7 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addInvoiceItem,
         updateInvoice,
         recordPayment,
+        recordAdvancePayment,
         releaseNoShow,
         scanAndReleaseNoShows,
         toggleStopSell,

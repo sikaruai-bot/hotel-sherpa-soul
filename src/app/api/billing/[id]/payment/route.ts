@@ -38,8 +38,8 @@ export async function POST(
     const newStatus: InvoiceStatus =
       newPaidAmount >= invoice.total ? InvoiceStatus.PAID : InvoiceStatus.PARTIAL;
 
-    // Create payment record & update invoice
-    const [payment, updatedInvoice] = await prisma.$transaction([
+    // Create payment record & update invoice (and reservation if linked)
+    const transactionOps: any[] = [
       prisma.payment.create({
         data: {
           invoiceId: invoice.id,
@@ -56,7 +56,18 @@ export async function POST(
           status: newStatus,
         },
       }),
-    ]);
+    ];
+
+    if (invoice.reservationId) {
+      transactionOps.push(
+        prisma.reservation.update({
+          where: { id: invoice.reservationId },
+          data: { paidAmount: { increment: Number(amount) } },
+        })
+      );
+    }
+
+    const [payment, updatedInvoice] = await prisma.$transaction(transactionOps);
 
     // Emit Automation Event for Webhooks
     await emitPmsEvent('payment.received', {

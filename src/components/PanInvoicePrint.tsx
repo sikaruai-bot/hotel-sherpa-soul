@@ -284,7 +284,20 @@ export default function PanInvoicePrint({ invoice, onClose }: PanInvoicePrintPro
                 </p>
               </div>
 
-              <div className="text-[11px] text-slate-500 space-y-0.5">
+              {/* Status Stamp */}
+              <div className="mt-2.5">
+                {calculatedGrandTotal - invoice.paidAmount > 0 ? (
+                  <div className="border-2 border-rose-600 border-dashed px-3 py-1 rounded text-rose-700 font-bold uppercase tracking-wider text-[11px] inline-block bg-rose-50/50 print:bg-transparent">
+                    ★ PARTIAL PAYMENT • DUE: NPR {(calculatedGrandTotal - invoice.paidAmount).toLocaleString()} ★
+                  </div>
+                ) : (
+                  <div className="border-2 border-emerald-700 px-3 py-1 rounded text-emerald-800 font-black uppercase tracking-wider text-[11px] inline-block bg-emerald-50/50 print:bg-transparent">
+                    ✓ PAID IN FULL (पूर्ण चुक्ता)
+                  </div>
+                )}
+              </div>
+
+              <div className="text-[11px] text-slate-500 space-y-0.5 pt-1">
                 <p>• Goods & services once provided are non-refundable.</p>
                 <p>• Standard Check-out time is 12:00 PM.</p>
                 <p>• This is a computer system generated bill.</p>
@@ -311,14 +324,26 @@ export default function PanInvoicePrint({ invoice, onClose }: PanInvoicePrintPro
               </div>
 
               <div className="flex justify-between font-bold text-emerald-700 pt-1">
-                <span className="font-sans">Paid Amount (बुझाएको रकम):</span>
+                <span className="font-sans">Paid / Advance (दाखिला भएको रकम):</span>
                 <span>NPR {invoice.paidAmount.toLocaleString()}</span>
               </div>
 
-              {calculatedGrandTotal - invoice.paidAmount > 0 && (
-                <div className="flex justify-between font-bold text-rose-600">
-                  <span className="font-sans">Balance Due (बाँकी रकम):</span>
+              {invoice.paymentMethod && (
+                <div className="flex justify-between text-[11px] text-slate-500">
+                  <span className="font-sans">Payment Mode (माध्यम):</span>
+                  <span>{invoice.paymentMethod}</span>
+                </div>
+              )}
+
+              {calculatedGrandTotal - invoice.paidAmount > 0 ? (
+                <div className="flex justify-between font-extrabold text-rose-600 pt-1 border-t border-dashed border-rose-300">
+                  <span className="font-sans">Balance Due (बाँकी बक्यौता):</span>
                   <span>NPR {(calculatedGrandTotal - invoice.paidAmount).toLocaleString()}</span>
+                </div>
+              ) : (
+                <div className="flex justify-between font-bold text-emerald-700 pt-1 border-t border-dashed border-emerald-300">
+                  <span className="font-sans">Balance Due (बाँकी बक्यौता):</span>
+                  <span>NPR 0 (FULL SETTLED)</span>
                 </div>
               )}
             </div>

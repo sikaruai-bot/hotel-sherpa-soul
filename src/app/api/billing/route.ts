@@ -1,6 +1,16 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { InvoiceStatus } from '@prisma/client';
+import { InvoiceStatus, PaymentMethod } from '@prisma/client';
+
+const methodMap: Record<string, PaymentMethod> = {
+  'Cash NPR': PaymentMethod.CASH_NPR,
+  'Cash USD': PaymentMethod.CASH_USD,
+  'eSewa': PaymentMethod.ESEWA,
+  'Khalti': PaymentMethod.KHALTI,
+  'Visa': PaymentMethod.VISA,
+  'MasterCard': PaymentMethod.MASTERCARD,
+  'Bank Transfer': PaymentMethod.BANK_TRANSFER,
+};
 
 export async function GET() {
   try {
@@ -37,6 +47,7 @@ export async function GET() {
         paidAmount: inv.paidAmount,
         paymentMethod: inv.paymentMethod || undefined,
         status: inv.status,
+        payments: inv.payments || [],
       };
     });
 
@@ -61,7 +72,7 @@ export async function POST(request: Request) {
       roomNumber,
       items = [],
       subtotal,
-      taxAmount,
+      taxAmount = 0,
       serviceCharge = 0,
       discount = 0,
       grandTotal,
@@ -69,6 +80,15 @@ export async function POST(request: Request) {
       paymentMethod,
       status = 'UNPAID',
     } = body;
+
+    const numPaidAmount = Number(paidAmount) || 0;
+    const numGrandTotal = Number(grandTotal) || 0;
+    const computedStatus: InvoiceStatus =
+      numPaidAmount >= numGrandTotal && numGrandTotal > 0
+        ? InvoiceStatus.PAID
+        : numPaidAmount > 0
+        ? InvoiceStatus.PARTIAL
+        : (status as InvoiceStatus) || InvoiceStatus.UNPAID;
 
     const invoice = await prisma.invoice.create({
       data: {
@@ -82,10 +102,26 @@ export async function POST(request: Request) {
         tax: Number(taxAmount),
         serviceCharge: Number(serviceCharge),
         discount: Number(discount),
-        total: Number(grandTotal),
-        paidAmount: Number(paidAmount),
+        total: numGrandTotal,
+        paidAmount: numPaidAmount,
         paymentMethod: paymentMethod || null,
-        status: status as InvoiceStatus,
+        status: computedStatus,
+        payments:
+          numPaidAmount > 0
+            ? {
+                create: {
+                  amount: numPaidAmount,
+                  method:
+                    paymentMethod && methodMap[paymentMethod]
+                      ? methodMap[paymentMethod]
+                      : PaymentMethod.CASH_NPR,
+                  transactionId: 'INIT-PAY',
+                },
+              }
+            : undefined,
+      },
+      include: {
+        payments: true,
       },
     });
 
@@ -108,6 +144,7 @@ export async function POST(request: Request) {
           paidAmount: invoice.paidAmount,
           paymentMethod: invoice.paymentMethod || undefined,
           status: invoice.status,
+          payments: invoice.payments || [],
         },
       },
       { status: 201 }
