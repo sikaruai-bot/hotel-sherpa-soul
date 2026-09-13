@@ -507,15 +507,8 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.warn('LocalStorage not available or parse error', e);
     }
-    // Attempt backend sync and auto-release expired no-shows
+    // Attempt backend sync
     refreshFromBackend();
-    scanAndReleaseNoShows();
-
-    const interval = setInterval(() => {
-      scanAndReleaseNoShows();
-    }, 5 * 60 * 1000);
-
-    return () => clearInterval(interval);
   }, []);
 
   // Save changes to LocalStorage

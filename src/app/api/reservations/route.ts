@@ -41,11 +41,6 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const statusParam = searchParams.get('status');
 
-    // 1. Auto-sweep and release any expired no-show bookings to unblock rooms
-    await autoReleaseExpiredNoShows().catch((err) =>
-      console.warn('Auto-release no-show error on reservations GET:', err)
-    );
-
     const reservations = await prisma.reservation.findMany({
       where: {
         ...(statusParam && { status: statusParam as ReservationStatus }),
@@ -147,11 +142,6 @@ export async function POST(request: Request) {
         { status: 404 }
       );
     }
-
-    // Auto-sweep expired no-shows before checking conflict so un-checked-in rooms can be booked
-    await autoReleaseExpiredNoShows().catch((err) =>
-      console.warn('Auto-release no-show error on reservations POST:', err)
-    );
 
     // 2.5 CATEGORY-LEVEL CAPACITY SHIELD: Max 2 rooms per category per day
     const categoryCheck = await checkCategoryCapacity({
