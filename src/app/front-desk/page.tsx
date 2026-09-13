@@ -75,6 +75,7 @@ export default function FrontDeskPage() {
   const [newLuggageText, setNewLuggageText] = useState('');
   const [showLuggageModal, setShowLuggageModal] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
+  const [selectedBookingRef, setSelectedBookingRef] = useState<string | undefined>(undefined);
 
   // Filter Arrivals & Departures
   const arrivals = reservations.filter(r => r.status === 'CONFIRMED' || r.status === 'CHECKED_IN');
@@ -227,10 +228,13 @@ export default function FrontDeskPage() {
         </div>
         <div className="flex flex-wrap gap-2.5">
           <button 
-            onClick={() => setShowQrModal(true)}
+            onClick={() => {
+              setSelectedBookingRef(undefined);
+              setShowQrModal(true);
+            }}
             className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 px-4 py-2 rounded-xl text-xs font-black transition shadow-sm"
           >
-            <QrCode size={16} /> Print Self Check-In QR
+            <QrCode size={16} /> Express Self Check-In QR
           </button>
           <button 
             onClick={() => setShowLuggageModal(true)}
@@ -306,6 +310,17 @@ export default function FrontDeskPage() {
                           className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm hover:scale-[1.01]"
                         >
                           <CheckCircle size={15} /> Arrival Check-In (Full Info)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedBookingRef(res.otaReference || res.id);
+                            setShowQrModal(true);
+                          }}
+                          className="bg-amber-500 hover:bg-amber-400 text-slate-950 py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 shadow-sm"
+                          title="Generate Self Check-In QR for this guest"
+                        >
+                          <QrCode size={14} /> QR
                         </button>
                         <button
                           onClick={() => {
@@ -1252,7 +1267,11 @@ export default function FrontDeskPage() {
       )}
 
       {/* Self Check-In QR Modal */}
-      <SelfCheckinQrModal isOpen={showQrModal} onClose={() => setShowQrModal(false)} />
+      <SelfCheckinQrModal 
+        isOpen={showQrModal} 
+        onClose={() => setShowQrModal(false)} 
+        bookingRef={selectedBookingRef}
+      />
 
       {/* Live Camera Photo Capture Modal */}
       <LiveCameraCaptureModal

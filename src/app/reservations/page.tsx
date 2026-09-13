@@ -27,15 +27,19 @@ import {
   Users,
   UserX,
   RefreshCw,
-  Zap
+  Zap,
+  QrCode
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePms, Reservation, Room, GuestIdType, PurposeOfVisitType } from '@/context/PmsContext';
+import SelfCheckinQrModal from '@/components/SelfCheckinQrModal';
 
 export default function ReservationsPage() {
   const { reservations, rooms, checkInGuest, checkOutGuest, releaseNoShow, scanAndReleaseNoShows } = usePms();
   const [scanningNoShows, setScanningNoShows] = useState(false);
   const [sweepToast, setSweepToast] = useState<string | null>(null);
+  const [showSelfCheckinQr, setShowSelfCheckinQr] = useState(false);
+  const [qrBookingRef, setQrBookingRef] = useState<string | undefined>(undefined);
 
   const handleManualSweep = async () => {
     setScanningNoShows(true);
@@ -324,6 +328,19 @@ export default function ReservationsPage() {
               Today
             </button>
           </div>
+
+          {/* Express Check-In QR Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setQrBookingRef(undefined);
+              setShowSelfCheckinQr(true);
+            }}
+            className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 px-3.5 py-2 rounded-xl text-xs font-black transition shadow-sm"
+            title="Print or view Reception Counter Self Check-In QR Standee"
+          >
+            <QrCode size={15} /> Express Check-In QR
+          </button>
 
           {/* New Reservation button */}
           <Link
@@ -743,7 +760,7 @@ export default function ReservationsPage() {
                 </div>
               )}
 
-              <div className="pt-2 flex gap-2">
+              <div className="pt-2 flex flex-wrap gap-2">
                 {selectedRes.status === 'CONFIRMED' && (
                   <>
                     <button
@@ -753,6 +770,17 @@ export default function ReservationsPage() {
                       className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20"
                     >
                       <CheckCircle2 size={14} /> Arrival Check-In (Full Info)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQrBookingRef(selectedRes.otaReference || selectedRes.id);
+                        setShowSelfCheckinQr(true);
+                      }}
+                      className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
+                      title="Generate Self Check-In QR for this reservation"
+                    >
+                      <QrCode size={14} /> Guest QR
                     </button>
                     <button
                       onClick={() => {
@@ -1253,6 +1281,12 @@ export default function ReservationsPage() {
           </div>
         </div>
       )}
+      {/* Express Self Check-In QR Standee Modal */}
+      <SelfCheckinQrModal
+        isOpen={showSelfCheckinQr}
+        onClose={() => setShowSelfCheckinQr(false)}
+        bookingRef={qrBookingRef}
+      />
     </div>
   );
 }

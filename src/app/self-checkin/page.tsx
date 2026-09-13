@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { 
   Search, 
   CheckCircle2, 
@@ -29,8 +30,13 @@ import {
   Upload,
   Loader2,
   Building2,
+  Printer,
+  Sparkles,
+  Smartphone,
   Image as ImageIcon
 } from 'lucide-react';
+import QrCodeImage from '@/components/QrCodeImage';
+import SelfCheckinQrModal from '@/components/SelfCheckinQrModal';
 
 interface BookingMatch {
   id: string;
@@ -93,11 +99,14 @@ export type GuestIdType =
   | 'PAN Card'
   | 'Other Official ID';
 
-export default function SelfCheckInPage() {
+function SelfCheckInContent() {
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [matches, setMatches] = useState<BookingMatch[] | null>(null);
+  const [showStandeeModal, setShowStandeeModal] = useState(false);
+  const [initialSearchDone, setInitialSearchDone] = useState(false);
 
   // Selected reservation for completing check-in
   const [selectedBooking, setSelectedBooking] = useState<BookingMatch | null>(null);
@@ -139,9 +148,8 @@ export default function SelfCheckInPage() {
   const [copiedEsewa, setCopiedEsewa] = useState(false);
 
   // 1. Search booking
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) {
+  const executeLookup = useCallback(async (query: string) => {
+    if (!query.trim()) {
       setErrorMsg('Please enter your Booking Confirmation Code, Phone number, or Name.');
       return;
     }
@@ -152,7 +160,7 @@ export default function SelfCheckInPage() {
     setSelectedBooking(null);
 
     try {
-      const res = await fetch(`/api/self-checkin?q=${encodeURIComponent(searchQuery.trim())}`);
+      const res = await fetch(`/api/self-checkin?q=${encodeURIComponent(query.trim())}`);
       const data = await res.json();
 
       if (!res.ok || !data.success) {
@@ -181,7 +189,22 @@ export default function SelfCheckInPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await executeLookup(searchQuery);
   };
+
+  // Auto-search if URL contains ?q= or ?ref= (e.g. from scanned reservation QR code)
+  useEffect(() => {
+    const q = searchParams.get('q') || searchParams.get('ref');
+    if (q && q.trim() && !initialSearchDone) {
+      setInitialSearchDone(true);
+      setSearchQuery(q.trim());
+      executeLookup(q.trim());
+    }
+  }, [searchParams, initialSearchDone, executeLookup]);
 
   // Upload payment receipt slip screenshot
   const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -324,9 +347,6 @@ export default function SelfCheckInPage() {
     setTimeout(() => setCopiedEsewa(false), 2000);
   };
 
-  // Fonepay / eSewa Payment QR image for Hotel Sherpa Soul
-  const paymentQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent('Hotel Sherpa Soul | eSewa/Fonepay: 9851068219 | Thamel, Kathmandu')}&color=0f172a&bgcolor=ffffff&margin=1`;
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-amber-500 selection:text-black">
       {/* Top Header */}
@@ -342,10 +362,21 @@ export default function SelfCheckInPage() {
               <p className="text-[11px] text-amber-400 font-medium font-mono">PAN: 119205419 • Self Check-In</p>
             </div>
           </div>
-          <span className="text-[10px] bg-emerald-950/80 border border-emerald-800 text-emerald-300 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            Live 24/7
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowStandeeModal(true)}
+              className="flex items-center gap-1.5 text-[11px] bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded-xl font-bold transition shadow-sm"
+              title="Print Reception Counter QR Standee"
+            >
+              <QrCode size={13} />
+              <span>Standee QR</span>
+            </button>
+            <span className="text-[10px] bg-emerald-950/80 border border-emerald-800 text-emerald-300 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              Live 24/7
+            </span>
+          </div>
         </div>
       </header>
 
@@ -1010,12 +1041,12 @@ export default function SelfCheckInPage() {
                 <div className="bg-slate-950/90 p-4 rounded-2xl border border-slate-800 text-center space-y-3">
                   {paymentMethod === 'eSewa / Fonepay QR' && (
                     <div className="space-y-3">
-                      <div className="inline-block p-3 bg-white rounded-2xl shadow-xl">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img 
-                          src={paymentQrUrl} 
-                          alt="eSewa / Fonepay QR Code" 
-                          className="w-48 h-48 mx-auto object-contain"
+                      <div className="inline-block p-3 bg-white rounded-2xl shadow-xl border-2 border-emerald-500/40">
+                        <QrCodeImage 
+                          data="Hotel Sherpa Soul | eSewa/Fonepay: 9851068219 | PAN: 119205419 | Thamel, Kathmandu"
+                          size={180}
+                          alt="eSewa / Fonepay QR Code"
+                          className="w-44 h-44 mx-auto rounded-lg"
                         />
                       </div>
                       <div className="space-y-1 text-xs">
@@ -1036,12 +1067,13 @@ export default function SelfCheckInPage() {
 
                   {paymentMethod === 'Khalti QR' && (
                     <div className="space-y-3">
-                      <div className="inline-block p-3 bg-white rounded-2xl shadow-xl">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img 
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent('Khalti: 9851068219 | Hotel Sherpa Soul')}&color=581c87&bgcolor=ffffff&margin=1`} 
-                          alt="Khalti QR Code" 
-                          className="w-48 h-48 mx-auto object-contain"
+                      <div className="inline-block p-3 bg-white rounded-2xl shadow-xl border-2 border-purple-500/40">
+                        <QrCodeImage 
+                          data="Khalti: 9851068219 | Hotel Sherpa Soul | PAN: 119205419"
+                          size={180}
+                          color={{ dark: '#581c87', light: '#ffffff' }}
+                          alt="Khalti QR Code"
+                          className="w-44 h-44 mx-auto rounded-lg"
                         />
                       </div>
                       <div className="space-y-1 text-xs">
@@ -1242,6 +1274,43 @@ export default function SelfCheckInPage() {
               </p>
             </div>
 
+            {/* Express Check-In QR Card Display */}
+            <div className="bg-gradient-to-b from-slate-900 to-slate-950 border border-amber-500/30 rounded-3xl p-4 shadow-xl text-center space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[11px] font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Smartphone size={14} className="text-amber-400" />
+                  Express Mobile QR Check-In
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowStandeeModal(true)}
+                  className="text-[11px] text-slate-400 hover:text-amber-300 flex items-center gap-1 font-semibold transition"
+                >
+                  <Printer size={12} /> Print Poster
+                </button>
+              </div>
+
+              <div className="flex items-center justify-center gap-4 bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800">
+                <div className="bg-white p-2 rounded-2xl shadow-lg shrink-0 border-2 border-amber-500/40">
+                  <QrCodeImage 
+                    data={typeof window !== 'undefined' ? window.location.href.split('?')[0] : 'https://pms.hotelsherpasoul.com/self-checkin'} 
+                    size={110} 
+                    alt="Express Self Check-In QR Code"
+                    className="w-24 h-24 rounded-lg"
+                  />
+                </div>
+                <div className="text-left space-y-1">
+                  <div className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/30">
+                    <Sparkles size={11} /> Scan with Phone Camera
+                  </div>
+                  <p className="text-xs font-bold text-white">Check In On Your Smartphone</p>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    Scan with your camera to open this portal on your phone, upload ID photos, and receive your room key.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Search Card */}
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">
               <form onSubmit={handleSearch} className="space-y-3">
@@ -1336,10 +1405,32 @@ export default function SelfCheckInPage() {
         )}
       </main>
 
+      {/* Self Check-In QR Standee Modal */}
+      <SelfCheckinQrModal 
+        isOpen={showStandeeModal} 
+        onClose={() => setShowStandeeModal(false)} 
+        bookingRef={selectedBooking?.otaConfirmNum}
+      />
+
       {/* Footer */}
       <footer className="border-t border-slate-900 px-4 py-3 text-center text-[11px] text-slate-500">
         Hotel Sherpa Soul • PAN No: 119205419 • Thamel, Kathmandu, Nepal
       </footer>
     </div>
+  );
+}
+
+export default function SelfCheckInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+        <div className="flex items-center gap-2 text-sm text-slate-400">
+          <Loader2 size={18} className="animate-spin text-amber-400" />
+          <span>Loading Express Check-In...</span>
+        </div>
+      </div>
+    }>
+      <SelfCheckInContent />
+    </Suspense>
   );
 }

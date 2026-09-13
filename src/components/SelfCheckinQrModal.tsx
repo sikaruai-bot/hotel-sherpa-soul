@@ -1,24 +1,27 @@
 "use client";
 
 import React, { useState } from 'react';
-import { QrCode, Printer, Copy, Check, X, ExternalLink, ShieldCheck, Wifi, Sparkles } from 'lucide-react';
+import { QrCode, Printer, Copy, Check, X, ExternalLink, Sparkles, Wifi, Phone, Building2 } from 'lucide-react';
+import QrCodeImage from '@/components/QrCodeImage';
 
 interface SelfCheckinQrModalProps {
   isOpen: boolean;
   onClose: () => void;
+  bookingRef?: string;
 }
 
-export default function SelfCheckinQrModal({ isOpen, onClose }: SelfCheckinQrModalProps) {
+export default function SelfCheckinQrModal({ isOpen, onClose, bookingRef }: SelfCheckinQrModalProps) {
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
 
-  const checkinUrl = typeof window !== 'undefined' 
-    ? `${window.location.origin}/self-checkin` 
-    : 'https://pms.hotelsherpasoul.com/self-checkin';
+  const origin = typeof window !== 'undefined' && window.location.origin 
+    ? window.location.origin 
+    : 'https://pms.hotelsherpasoul.com';
 
-  // Crisp high-res QR code image generated via standard Google Charts / QRServer API
-  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${encodeURIComponent(checkinUrl)}&color=0f172a&bgcolor=ffffff&margin=1`;
+  const checkinUrl = bookingRef 
+    ? `${origin}/self-checkin?q=${encodeURIComponent(bookingRef)}`
+    : `${origin}/self-checkin`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(checkinUrl);
@@ -40,8 +43,12 @@ export default function SelfCheckinQrModal({ isOpen, onClose }: SelfCheckinQrMod
               <QrCode size={18} />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-slate-900">Guest Self Check-In QR Standee</h2>
-              <p className="text-[11px] text-slate-500">Print or display at reception counter & entrance door</p>
+              <h2 className="text-sm font-bold text-slate-900">
+                {bookingRef ? `Guest Express Check-In QR (${bookingRef})` : 'Guest Self Check-In QR Standee'}
+              </h2>
+              <p className="text-[11px] text-slate-500">
+                {bookingRef ? 'Share with guest or print for their arrival' : 'Print or display at reception counter & entrance door'}
+              </p>
             </div>
           </div>
           <button
@@ -76,22 +83,23 @@ export default function SelfCheckinQrModal({ isOpen, onClose }: SelfCheckinQrMod
               </p>
             </div>
 
-            {/* QR Code Container */}
+            {/* Offline-Reliable Local QR Code Container */}
             <div className="bg-white p-4 rounded-2xl shadow-md inline-block border-4 border-amber-500/30">
-              <img 
-                src={qrImageUrl} 
-                alt="Self Check-in QR Code" 
-                className="w-48 h-48 object-contain rounded-lg"
+              <QrCodeImage 
+                data={checkinUrl}
+                size={200}
+                alt="Hotel Sherpa Soul Express Self Check-In QR"
+                className="w-48 h-48 rounded-lg"
               />
             </div>
 
             {/* Call to action */}
             <div className="space-y-1">
               <div className="text-base font-black text-amber-300 tracking-tight">
-                Front Desk Away? Scan to Check In
+                {bookingRef ? 'Scan for Instant Booking Check-In' : 'Front Desk Away? Scan to Check In'}
               </div>
               <p className="text-[11px] text-slate-300 leading-relaxed max-w-xs mx-auto">
-                Late arrival or staff stepped away? Scan with your phone camera to instantly receive your Room Number, Key Instructions & High-Speed WiFi password.
+                Scan with any smartphone camera to check in immediately, settle balance, and receive your Room Number, Key Pickup & High-Speed WiFi code.
               </p>
             </div>
 
@@ -105,7 +113,7 @@ export default function SelfCheckinQrModal({ isOpen, onClose }: SelfCheckinQrMod
           {/* Direct URL info */}
           <div className="w-full max-w-sm mt-4 p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between text-xs">
             <div className="truncate mr-2">
-              <p className="text-[10px] text-slate-400 font-bold uppercase">Direct URL</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase">Check-In Direct Link</p>
               <p className="text-slate-700 font-mono text-[11px] truncate">{checkinUrl}</p>
             </div>
             <button
@@ -121,7 +129,7 @@ export default function SelfCheckinQrModal({ isOpen, onClose }: SelfCheckinQrMod
         {/* Modal Footer */}
         <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between">
           <a
-            href="/self-checkin"
+            href={checkinUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition"
@@ -144,7 +152,7 @@ export default function SelfCheckinQrModal({ isOpen, onClose }: SelfCheckinQrMod
               className="px-5 py-2 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center gap-1.5 transition shadow-sm"
             >
               <Printer size={14} />
-              Print Counter Poster
+              Print Counter Standee
             </button>
           </div>
         </div>
