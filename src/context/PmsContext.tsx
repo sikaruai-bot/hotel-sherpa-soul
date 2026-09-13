@@ -221,6 +221,14 @@ interface PmsContextType {
   addMaintenanceTicket: (ticket: Omit<MaintenanceTicket, 'id' | 'reportedAt'>) => void;
   resolveMaintenanceTicket: (ticketId: string) => void;
   createInvoice: (invoice: Omit<Invoice, 'id'>) => Invoice;
+  addInvoiceItem: (
+    invoiceId: string,
+    item: { description: string; quantity: number; unitPrice: number; total: number }
+  ) => Promise<void>;
+  updateInvoice: (
+    invoiceId: string,
+    updates: Partial<Invoice>
+  ) => Promise<void>;
   recordPayment: (invoiceId: string, amount: number, method: Invoice['paymentMethod']) => void;
   releaseNoShow: (reservationId: string, reason?: string) => void;
   scanAndReleaseNoShows: (cutOffHour?: number) => Promise<{ releasedCount: number }>;
@@ -1227,6 +1235,95 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }).catch(err => console.warn('Sync payment error:', err));
   };
 
+  const addInvoiceItem = async (
+    invoiceId: string,
+    item: { description: string; quantity: number; unitPrice: number; total: number }
+  ) => {
+    const target = invoices.find(inv => inv.id === invoiceId);
+    if (!target) return;
+
+    const newItems = [...(target.items || []), item];
+    const newSubtotal = newItems.reduce((sum, it) => sum + it.total, 0);
+    const newGrandTotal = Math.max(0, newSubtotal - (target.discount || 0));
+    const newStatus = target.paidAmount >= newGrandTotal ? 'PAID' : (target.paidAmount > 0 ? 'PARTIAL' : 'UNPAID');
+
+    const updated = invoices.map(inv => {
+      if (inv.id === invoiceId) {
+        return {
+          ...inv,
+          items: newItems,
+          subtotal: newSubtotal,
+          grandTotal: newGrandTotal,
+          status: newStatus as any,
+        };
+      }
+      return inv;
+    });
+
+    setInvoices(updated);
+    persist({
+      rooms,
+      reservations,
+      contracts,
+      kitchenUsers,
+      kitchenIncidents,
+      gasLevel,
+      housekeepingTasks,
+      maintenanceTickets,
+      invoices: updated,
+      notifications,
+      stopSellActive,
+    });
+
+    try {
+      await fetch(`/api/billing/${invoiceId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: newItems,
+          subtotal: newSubtotal,
+          grandTotal: newGrandTotal,
+          status: newStatus,
+        }),
+      });
+    } catch (err) {
+      console.warn('Sync add invoice item error:', err);
+    }
+  };
+
+  const updateInvoice = async (invoiceId: string, updates: Partial<Invoice>) => {
+    const updated = invoices.map(inv => {
+      if (inv.id === invoiceId) {
+        return { ...inv, ...updates };
+      }
+      return inv;
+    });
+    setInvoices(updated);
+    persist({
+      rooms,
+      reservations,
+      contracts,
+      kitchenUsers,
+      kitchenIncidents,
+      gasLevel,
+      housekeepingTasks,
+      maintenanceTickets,
+      invoices: updated,
+      notifications,
+      stopSellActive,
+    });
+
+    try {
+      await fetch(`/api/billing/${invoiceId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+    } catch (err) {
+      console.warn('Sync update invoice error:', err);
+    }
+  };
+
   const releaseNoShow = (reservationId: string, reason?: string) => {
     let targetRoomNumber = '';
     let guest = '';
@@ -1351,6 +1448,8 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addMaintenanceTicket,
         resolveMaintenanceTicket,
         createInvoice,
+        addInvoiceItem,
+        updateInvoice,
         recordPayment,
         releaseNoShow,
         scanAndReleaseNoShows,
