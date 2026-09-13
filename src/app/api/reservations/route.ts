@@ -71,6 +71,11 @@ export async function GET(request: Request) {
       phone: r.guest.phoneNumber || '',
       nationality: r.guest.nationality || 'Nepal',
       passportNumber: r.guest.passportNumber || '',
+      idNumber: r.guest.idNumber || r.guest.passportNumber || '',
+      photoUrl: r.guest.photoUrl || undefined,
+      signatureUrl: r.guest.signatureUrl || undefined,
+      isBlacklisted: Boolean(r.guest.isBlacklisted),
+      blacklistReason: r.guest.blacklistReason || undefined,
       roomNumber: r.room.roomNumber,
       roomType: r.room.roomType.name,
       checkInDate: r.checkInDate.toISOString().split('T')[0],
@@ -105,6 +110,8 @@ export async function POST(request: Request) {
       phone,
       nationality = 'Nepal',
       passportNumber,
+      idNumber,
+      photoUrl,
       roomNumber,
       checkInDate,
       checkOutDate,
@@ -199,22 +206,24 @@ export async function POST(request: Request) {
           { checkOutDate: { gt: start } },
         ],
       },
-      include: { guest: true },
+      include: {
+        guest: true,
+      },
     });
 
     if (conflictingReservation) {
-      const existingIn = conflictingReservation.checkInDate.toISOString().split('T')[0];
-      const existingOut = conflictingReservation.checkOutDate.toISOString().split('T')[0];
+      const conflictStart = conflictingReservation.checkInDate.toISOString().split('T')[0];
+      const conflictEnd = conflictingReservation.checkOutDate.toISOString().split('T')[0];
       return NextResponse.json(
         {
           success: false,
-          error: `DOUBLE_BOOKING_PREVENTED: Room ${roomNumber} is already booked for ${conflictingReservation.guest.name} from ${existingIn} to ${existingOut}. Please pick an alternative room.`,
+          error: `डबल बुकिङ रोकियो: Room ${roomNumber} is already booked from ${conflictStart} to ${conflictEnd} for ${conflictingReservation.guest.name}.`,
           conflict: {
             type: 'RESERVATION',
             guestName: conflictingReservation.guest.name,
-            checkInDate: existingIn,
-            checkOutDate: existingOut,
-            source: conflictingReservation.source,
+            checkInDate: conflictStart,
+            checkOutDate: conflictEnd,
+            status: conflictingReservation.status,
           },
         },
         { status: 409 }
@@ -254,37 +263,65 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5. Find or create Guest
-    let guest = await prisma.guest.findFirst({
-      where: {
-        OR: [
-          ...(email ? [{ email }] : []),
-          ...(phone ? [{ phoneNumber: phone }] : []),
-          ...(passportNumber ? [{ passportNumber }] : []),
-          { name: guestName },
-        ],
-      },
-    });
+    // 5. ID-FIRST Guest Matching (phone number can change, government ID remains unique!)
+    const resolvedId = (idNumber || passportNumber || '').trim();
+    let guest = null;
+
+    // 5a. Primary lookup: Government ID Number (Citizenship, Passport, National ID)
+    if (resolvedId && resolvedId.length >= 3) {
+      guest = await prisma.guest.findFirst({
+        where: {
+          OR: [
+            { idNumber: { equals: resolvedId, mode: 'insensitive' } },
+            { passportNumber: { equals: resolvedId, mode: 'insensitive' } },
+          ],
+        },
+      });
+    }
+
+    // 5b. Secondary lookup: Phone number
+    if (!guest && phone && phone.trim().length >= 6) {
+      guest = await prisma.guest.findFirst({
+        where: {
+          phoneNumber: { contains: phone.trim(), mode: 'insensitive' as const },
+        },
+      });
+    }
+
+    // 5c. Fallback lookup: Email or exact Name
+    if (!guest) {
+      guest = await prisma.guest.findFirst({
+        where: {
+          OR: [
+            ...(email ? [{ email: { equals: email.trim(), mode: 'insensitive' as const } }] : []),
+            { name: { equals: guestName.trim(), mode: 'insensitive' as const } },
+          ],
+        },
+      });
+    }
 
     if (!guest) {
       guest = await prisma.guest.create({
         data: {
-          name: guestName,
-          email: email || null,
-          phoneNumber: phone || null,
-          nationality,
-          passportNumber: passportNumber || null,
+          name: guestName.trim(),
+          email: email ? email.trim() : null,
+          phoneNumber: phone ? phone.trim() : null,
+          nationality: nationality ? nationality.trim() : 'Nepal',
+          passportNumber: resolvedId || null,
+          idNumber: resolvedId || null,
+          photoUrl: photoUrl || null,
         },
       });
     } else {
-      // Update info if provided
+      // Update guest info with latest data while preserving blacklist status
       guest = await prisma.guest.update({
         where: { id: guest.id },
         data: {
-          ...(passportNumber && { passportNumber }),
-          ...(phone && { phoneNumber: phone }),
-          ...(email && { email }),
-          ...(nationality && { nationality }),
+          ...(resolvedId && { passportNumber: resolvedId, idNumber: resolvedId }),
+          ...(phone && { phoneNumber: phone.trim() }),
+          ...(email && { email: email.trim() }),
+          ...(nationality && { nationality: nationality.trim() }),
+          ...(photoUrl && { photoUrl }),
         },
       });
     }

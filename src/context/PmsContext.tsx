@@ -76,6 +76,10 @@ export interface Reservation {
   status: 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED' | 'NO_SHOW';
   source: 'Booking.com' | 'Agoda' | 'Airbnb' | 'Trip.com' | 'Direct Website' | 'Walk-In' | 'WhatsApp' | 'Phone';
   specialRequests?: string;
+  photoUrl?: string;
+  signatureUrl?: string;
+  isBlacklisted?: boolean;
+  blacklistReason?: string;
   createdAt: string;
 }
 

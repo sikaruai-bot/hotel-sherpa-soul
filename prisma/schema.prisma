@@ -79,6 +79,13 @@ model Guest {
   name              String
   nationality       String?
   passportNumber    String?
+  idNumber          String?
+  photoUrl          String?
+  signatureUrl      String?
+  isBlacklisted     Boolean            @default(false)
+  blacklistReason   String?
+  blacklistedAt     DateTime?
+  blacklistedBy     String?
   email             String?
   phoneNumber       String?
   reservations      Reservation[]

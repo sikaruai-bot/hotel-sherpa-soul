@@ -24,16 +24,24 @@ import {
   Check,
   Key,
   Users,
-  UserX
+  UserX,
+  Camera,
+  AlertOctagon,
+  Sparkles,
+  RotateCcw
 } from 'lucide-react';
 import { usePms, Reservation, GuestIdType, PurposeOfVisitType } from '@/context/PmsContext';
 import SelfCheckinQrModal from '@/components/SelfCheckinQrModal';
+import LiveCameraCaptureModal from '@/components/LiveCameraCaptureModal';
 
 export default function FrontDeskPage() {
   const { reservations, checkInGuest, checkOutGuest, createInvoice, releaseNoShow } = usePms();
 
   // Full Check-In Modal State
   const [selectedResForCheckIn, setSelectedResForCheckIn] = useState<Reservation | null>(null);
+  const [guestPhotoUrl, setGuestPhotoUrl] = useState('');
+  const [isLiveCameraOpen, setIsLiveCameraOpen] = useState(false);
+  const [checkInLookupAlert, setCheckInLookupAlert] = useState<any | null>(null);
   const [idType, setIdType] = useState<GuestIdType>('Passport');
   const [idNumber, setIdNumber] = useState('');
   const [idIssuedPlace, setIdIssuedPlace] = useState('');
@@ -74,6 +82,8 @@ export default function FrontDeskPage() {
   const openCheckInModal = (res: Reservation) => {
     setSelectedResForCheckIn(res);
     setGuestFullName(res.guestName || '');
+    setGuestPhotoUrl(res.photoUrl || '');
+    setCheckInLookupAlert(null);
     const isNepali = res.nationality?.toLowerCase() === 'nepali' || res.nationality?.toLowerCase() === 'nepal';
     setIdType(res.idType || (isNepali ? 'Citizenship (नागरिकता)' : 'Passport'));
     setIdNumber(res.idNumber || res.passportNumber || '');
@@ -100,6 +110,41 @@ export default function FrontDeskPage() {
     setKeyHandedOver(res.keyHandedOver !== undefined ? res.keyHandedOver : true);
   };
 
+  // Real-time lookup for check-in modal to warn of blacklist / unpaid dues
+  React.useEffect(() => {
+    if (!selectedResForCheckIn) return;
+    const idVal = idNumber.trim();
+    const phoneVal = guestPhone.trim();
+
+    if (idVal.length < 3 && phoneVal.length < 6) {
+      setCheckInLookupAlert(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const queryParams = new URLSearchParams();
+        if (idVal.length >= 3) queryParams.set('idNumber', idVal);
+        if (phoneVal.length >= 6) queryParams.set('phone', phoneVal);
+
+        const res = await fetch(`/api/guests/lookup?${queryParams.toString()}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.matched) {
+            setCheckInLookupAlert(data);
+            if (!guestPhotoUrl && data.guest?.photoUrl) {
+              setGuestPhotoUrl(data.guest.photoUrl);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Check-in ID lookup error:', err);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [idNumber, guestPhone, selectedResForCheckIn, guestPhotoUrl]);
+
   const handleConfirmCheckIn = () => {
     if (!selectedResForCheckIn) return;
     checkInGuest(selectedResForCheckIn.id, {
@@ -107,6 +152,7 @@ export default function FrontDeskPage() {
       idType,
       idNumber: idNumber || selectedResForCheckIn.passportNumber,
       passportNumber: idNumber || selectedResForCheckIn.passportNumber,
+      photoUrl: guestPhotoUrl || selectedResForCheckIn.photoUrl,
       idIssuedPlace,
       nationality,
       phone: guestPhone,
@@ -388,6 +434,86 @@ export default function FrontDeskPage() {
                   <p className="font-bold text-xs text-emerald-400">{selectedResForCheckIn.source}</p>
                 </div>
               </div>
+
+              {/* Live Camera Photo & ID Snapshot Bar */}
+              <div className="p-3.5 bg-purple-50/80 border border-purple-200 rounded-2xl flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  {guestPhotoUrl ? (
+                    <div className="w-12 h-12 rounded-xl overflow-hidden border-2 border-purple-500 shrink-0 bg-slate-900">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={guestPhotoUrl} alt="Guest face" className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-purple-100 border border-purple-300 text-purple-700 flex items-center justify-center shrink-0">
+                      <Camera size={20} />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                      <span>{guestPhotoUrl ? '✓ लाइभ फोटो संलग्न (Live Photo Captured)' : 'पाहुनाको प्रत्यक्ष फोटो (Guest Live Photo)'}</span>
+                    </p>
+                    <p className="text-[10px] text-purple-700 truncate">
+                      {guestPhotoUrl ? 'GRC कार्ड र प्रहरी अभिलेखमा सुरक्षित हुनेछ।' : 'वेबक्याम वा मोबाइलबाट १-क्लिकमा फोटो खिच्नुहोस्'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsLiveCameraOpen(true)}
+                    className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                  >
+                    <Camera size={13} />
+                    <span>{guestPhotoUrl ? 'फेरि खिच्नुहोस्' : 'फोटो खिच्नुहोस्'}</span>
+                  </button>
+                  {guestPhotoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setGuestPhotoUrl('')}
+                      className="p-1.5 bg-white border border-rose-200 rounded-xl text-rose-600 hover:bg-rose-50 transition"
+                      title="फोटो हटाउनुहोस्"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 🚨 BLACKLISTED GUEST ALERT IN CHECK-IN */}
+              {checkInLookupAlert?.guest?.isBlacklisted && (
+                <div className="bg-gradient-to-r from-rose-950 to-rose-900 text-white p-4 rounded-2xl border-2 border-rose-500 shadow-md space-y-2 animate-shake">
+                  <div className="flex items-start gap-2.5">
+                    <AlertOctagon size={20} className="text-rose-400 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-[10px] font-black uppercase tracking-wider bg-rose-500/40 text-rose-100 px-2 py-0.5 rounded-full">
+                        🚫 Blacklist Warning
+                      </span>
+                      <h4 className="text-xs font-black text-white mt-0.5">
+                        सचेत रहनुहोस्! यो व्यक्ति होटलको कालोसूचीमा हुनुहुन्छ।
+                      </h4>
+                      <p className="text-[11px] text-rose-200 mt-1 italic">
+                        कारण: "{checkInLookupAlert.guest.blacklistReason || 'बिल नतिरी फरार भएको वा नियम उल्लंघन'}"
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ⚠️ PENDING DUE BALANCE IN CHECK-IN */}
+              {checkInLookupAlert?.hasPendingDue && !checkInLookupAlert.guest.isBlacklisted && (
+                <div className="bg-amber-50 border-2 border-amber-300 p-3 rounded-2xl flex items-center gap-2.5 text-amber-950">
+                  <AlertCircle size={18} className="text-amber-600 shrink-0" />
+                  <div className="text-xs">
+                    <span className="font-black text-amber-900">
+                      बक्यौता बाँकी: रू. {checkInLookupAlert.pendingDueAmount.toLocaleString()} ($ {(checkInLookupAlert.pendingDueAmount / 135).toFixed(1)} USD)
+                    </span>
+                    <p className="text-[11px] text-amber-800">
+                      यो पाहुनाको विगतको बसाइको बिल तिर्न बाँकी छ। चेक-इन सम्पन्न गर्नुअघि बक्यौता असुल गर्नुहोस्।
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* 1. Official Identification Document (ID Type Dropdown) */}
               <div className="p-4 bg-amber-50/70 border border-amber-200/80 rounded-2xl space-y-3">
@@ -811,11 +937,19 @@ export default function FrontDeskPage() {
                   </div>
                 </div>
               </div>
-              <div className="text-right">
-                <span className="bg-blue-100 text-blue-800 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                  Guest Registration Card (GRC)
-                </span>
-                <p className="text-[11px] text-slate-500 mt-1 font-mono">Ref: {selectedResForDetails.otaReference || selectedResForDetails.id}</p>
+              <div className="flex items-center gap-3">
+                {selectedResForDetails.photoUrl && (
+                  <div className="w-14 h-16 rounded-xl overflow-hidden border-2 border-slate-300 shrink-0 bg-slate-100 shadow-xs">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={selectedResForDetails.photoUrl} alt="Guest Face" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <div className="text-right">
+                  <span className="bg-blue-100 text-blue-800 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                    Guest Registration Card (GRC)
+                  </span>
+                  <p className="text-[11px] text-slate-500 mt-1 font-mono">Ref: {selectedResForDetails.otaReference || selectedResForDetails.id}</p>
+                </div>
               </div>
             </div>
 
@@ -1090,6 +1224,14 @@ export default function FrontDeskPage() {
 
       {/* Self Check-In QR Modal */}
       <SelfCheckinQrModal isOpen={showQrModal} onClose={() => setShowQrModal(false)} />
+
+      {/* Live Camera Photo Capture Modal */}
+      <LiveCameraCaptureModal
+        isOpen={isLiveCameraOpen}
+        onClose={() => setIsLiveCameraOpen(false)}
+        onCapture={(photoUrl) => setGuestPhotoUrl(photoUrl)}
+        guestName={guestFullName || selectedResForCheckIn?.guestName || 'Guest'}
+      />
 
     </div>
   );
