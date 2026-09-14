@@ -11,6 +11,8 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "node --import tsx/esm prisma/seed.ts",
+    "db:backup": "tsx scripts/backup-db.ts",
+    "db:restore": "tsx scripts/restore-db.ts",
     "deploy": "vercel --prod"
   },
   "dependencies": {
