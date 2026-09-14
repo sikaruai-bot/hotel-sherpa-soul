@@ -69,6 +69,7 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarPr
             </h1>
             <p className="text-[11px] text-amber-400 font-semibold font-mono">PAN: 119205419</p>
             <p className="text-[10px] text-slate-400 truncate">Thamel, Kathmandu</p>
+            <p className="text-[10px] text-emerald-400 font-mono font-medium truncate">+977-1-4530311 / 9851068219</p>
           </div>
         </div>
       </div>

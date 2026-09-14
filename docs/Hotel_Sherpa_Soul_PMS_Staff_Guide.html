@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+  <meta charset="UTF-8">
+  <title>होटल शेरपा सोल PMS – आधिकारिक स्टाफ तालिम तथा सञ्चालन निर्देशिका (Operations Manual)</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Mukta:wght@300;400;500;600;700;800&family=Inter:wght@400;600;700;900&display=swap');
+
+    @page {
+      size: A4 portrait;
+      margin: 16mm 14mm 16mm 14mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      font-family: 'Mukta', 'Inter', -apple-system, sans-serif;
+      color: #1e293b;
+      background: #ffffff;
+      line-height: 1.5;
+      font-size: 13px;
+      margin: 0;
+      padding: 0;
+    }
+
+    .header-banner {
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%);
+      color: white;
+      padding: 24px;
+      border-radius: 16px;
+      margin-bottom: 24px;
+      border-bottom: 4px solid #f59e0b;
+    }
+
+    .hotel-name {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin: 0;
+      color: #ffffff;
+    }
+
+    .hotel-meta {
+      font-size: 12px;
+      color: #c7d2fe;
+      margin-top: 4px;
+    }
+
+    .doc-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-top: 14px;
+      background: rgba(255, 255, 255, 0.12);
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 20px;
+      color: #fef08a;
+      border: 1px solid rgba(254, 240, 138, 0.3);
+    }
+
+    .section {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 18px;
+      page-break-inside: avoid;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #0f172a;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 6px;
+      margin-top: 0;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .step-box {
+      background: #f8fafc;
+      border-left: 4px solid #4f46e5;
+      padding: 10px 14px;
+      margin-bottom: 10px;
+      border-radius: 0 8px 8px 0;
+    }
+
+    .step-num {
+      font-weight: 800;
+      color: #4f46e5;
+      font-size: 13px;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      margin-right: 4px;
+    }
+
+    .badge-blue { background: #dbeafe; color: #1e40af; }
+    .badge-green { background: #dcfce7; color: #166534; }
+    .badge-purple { background: #f3e8ff; color: #6b21a8; }
+    .badge-amber { background: #fef3c7; color: #92400e; }
+    .badge-red { background: #fee2e2; color: #991b1b; }
+
+    .callout-alert {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-left: 4px solid #f59e0b;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-size: 12px;
+    }
+
+    .callout-security {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-left: 4px solid #ef4444;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-size: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+      font-size: 12px;
+    }
+
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 6px 10px;
+      text-align: left;
+    }
+
+    th {
+      background: #f1f5f9;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    .footer {
+      text-align: center;
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 24px;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 8px;
+    }
+
+    .page-break {
+      page-break-after: always;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <div class="header-banner">
+    <h1 class="hotel-name">HOTEL SHERPA SOUL</h1>
+    <div class="hotel-meta">
+      📍 भगवती मार्ग-२६, ठमेल, काठमाडौँ • PAN: 119205419 • फोन: +977-1-4530311 / 9851068219 • इमेल: info@hotelsherpasoul.com
+    </div>
+    <div class="doc-title">
+      📘 होटल PMS सञ्चालन तथा स्टाफ तालिम निर्देशिका (Standard Operating Procedure)
+    </div>
+  </div>
+
+  <!-- परिचय -->
+  <div class="section">
+    <h2 class="section-title">🌟 १. प्रणाली परिचय र मुख्य लगइन</h2>
+    <p>
+      होटल शेरपा सोलको यो PMS (Property Management System) पूर्ण रूपमा क्लाउडमा आधारित, स्वचालित (Automated) र नेपाल पर्यटन तथा प्रहरी कानुन अनुसार तयार गरिएको प्रणाली हो।
+    </p>
+    <ul>
+      <li><strong>वेबसाइट लिङ्क:</strong> <a href="https://pms.hotelsherpasoul.com">https://pms.hotelsherpasoul.com</a></li>
+      <li><strong>सञ्चालन हुने डिभाइस:</strong> कम्प्युटर, ल्यापटप, ट्याब्लेट वा मोबाइल फोनबाट सिधै इन्टरनेट ब्राउजरमा चलाउन सकिन्छ।</li>
+      <li><strong>सिफ्ट व्यवस्थापन:</strong> रिसेप्सनमा बस्ने स्टाफले आफ्नो नाम र सिफ्ट (Day Shift / Night Shift) छानेर लगइन गर्नुपर्छ।</li>
+    </ul>
+  </div>
+
+  <!-- भाग २: नयाँ बुकिङ र वाक-इन -->
+  <div class="section">
+    <h2 class="section-title">📝 २. नयाँ पाहुना दर्ता र वाक-इन बुकिङ (Walk-In Booking)</h2>
+    <p>काउन्टरमा नयाँ पाहुना आउँदा माथिको <strong>"New Booking"</strong> बटन थिचेर दर्ता गर्नुहोस्:</p>
+    
+    <div class="step-box">
+      <span class="step-num">चरण १: कोठा र मिति छनोट</span><br>
+      पाहुना बस्ने मिति (Check-in / Check-out) छान्नुहोस्। कोठा नम्बर छान्दा उपलब्ध छ वा पहिले नै बुक भइसकेको छ, प्रणालीले आफैं <strong>Double-Booking Shield</strong> मार्फत बताउँछ।
+    </div>
+
+    <div class="step-box">
+      <span class="step-num">चरण २: सरकारी परिचयपत्र प्रकार (ID Type Dropdown)</span><br>
+      ड्रपडाउनबाट पाहुनाको परिचयपत्र छान्नुहोस्:
+      <span class="badge badge-blue">Citizenship (नागरिकता)</span>
+      <span class="badge badge-purple">Passport (राहदानी)</span>
+      <span class="badge badge-green">National ID (राष्ट्रिय परिचयपत्र)</span>
+      <span class="badge badge-amber">Driving License</span>
+      <span class="badge badge-blue">Voter ID</span>
+      <span class="badge badge-purple">PAN Card</span>
+    </div>
+
+    <div class="step-box">
+      <span class="step-num">चरण ३: परिचयपत्र फाइल अपलोड वा लाइभ क्यामेरा (ID & Photo Upload)</span><br>
+      • <strong>कागजात अपलोड (Upload File)</strong>: कम्प्युटर वा मोबाइलबाट नागरिकता/पासपोर्टको फोटो सिधै अपलोड गर्नुहोस्।<br>
+      • <strong>Live Photo</strong>: काउन्टरमा वेबक्याम वा मोबाइल क्यामेराबाट तत्काल १-क्लिकमा पाहुनाको प्रत्यक्ष फोटो खिच्नुहोस्।
+    </div>
+
+    <div class="step-box">
+      <span class="step-num">चरण ४: स्थायी ठेगाना र सम्पर्क विवरण</span><br>
+      पाहुनाको नाम, फोन नम्बर र <strong>Permanent Address (स्थायी ठेगाना)</strong> जस्तै: जिल्ला, गाउँपालिका/नगरपालिका अनिवार्य भर्नुहोस्।
+    </div>
+
+    <div class="callout-alert">
+      💡 <strong>१-क्लिक अटो-फिल (Returning Guest):</strong> यदि पाहुना पहिले पनि बसिसकेको छ भने उसको परिचयपत्र वा फोन नम्बर हाल्नासाथ सिस्टमले पुरानो रेकर्ड पत्ता लगाई <strong>"१-क्लिक अटो-फिल"</strong> बटन दिन्छ, जसले सबै फारम १ सेकेन्डमै भरिदिन्छ।
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- भाग ३: फ्रन्ट डेस्क र GRC चेक-इन -->
+  <div class="section">
+    <h2 class="section-title">🛎️ ३. फ्रन्ट डेस्क र आगमन चेक-इन (Arrival Check-In & GRC)</h2>
+    <p>बुकिङ भइसकेका पाहुनाहरू होटलमा आइपुग्दा <strong>"Front Desk & Check-in"</strong> मेनुबाट चेक-इन गरिन्छ:</p>
+    
+    <div class="step-box">
+      <span class="step-num">१. आगमन सूची (Arrivals) मा पाहुना छान्नुहोस्:</span><br>
+      पाहुनाको नाम अगाडि रहेको हरियो <strong>"Check-In"</strong> बटन थिच्नुहोस्।
+    </div>
+
+    <div class="step-box">
+      <span class="step-num">२. नेपाल प्रहरी तथा पर्यटन मापदण्ड (GRC Card Form):</span><br>
+      • पाहुनाको फोटो/कागजात संलग्न भएको रुजु गर्नुहोस्।<br>
+      • पाहुना संख्या (पुरुष, महिला, बालबालिका) प्रविष्ट गर्नुहोस्।<br>
+      • यात्राको उद्देश्य (Trekking, Holiday, Business) र आएको ठाउँ/गन्तव्य छान्नुहोस्।<br>
+      • <strong>Room Key Handed Over (साँचो हस्तान्तरण)</strong> मा टिक लगाउनुहोस्।
+    </div>
+
+    <div class="step-box">
+      <span class="step-num">३. चेक-इन पुष्टि (Confirm Check-In):</span><br>
+      पुष्टि गर्नासाथ कोठा तुरुन्तै <strong>OCCUPIED</strong> हुन्छ र प्रणालीको प्रत्यक्ष ड्यासबोर्डमा देखिन्छ।
+    </div>
+
+    <div class="callout-security">
+      🚫 <strong>कालोसूची सुरक्षा (Blacklist Shield):</strong> यदि कुनै पाहुनाले पहिले बदमासी गरेको वा बिल नतिरी फरार भएको रेकर्ड छ भने सिस्टमले तुरुन्तै रातो चेतावनी (Warning) देखाउँछ। म्यानेजरको स्वीकृतिबिना चेक-इन गर्न पाइँदैन।
+    </div>
+  </div>
+
+  <!-- भाग ४: क्यालेन्डर र नो-शो अटो-रिलिज -->
+  <div class="section">
+    <h2 class="section-title">📅 ४. क्यालेन्डर, च्यानल सिंक र नो-शो खाली गर्ने तरिका</h2>
+    <ul>
+      <li><strong>महिना र टेप-चार्ट दृश्य:</strong> <strong>"Calendar & Bookings"</strong> मा गएर महिनाभरीको कोठा तालिका हेर्न सकिन्छ। Booking.com (निलो), Agoda (रातो), Airbnb (गुलाबी) र Walk-in (हरियो) रंगमा स्पष्ट चिनिन्छ।</li>
+      <li><strong>नो-शो कोठा खाली गर्ने (Release No-Show):</strong> यदि कुनै पाहुना तोकिएको समयसम्म होटलमा आएन भने माथिको <strong>"Release Expired (No-Show)"</strong> थिचेर कोठालाई तत्काल खाली (Available) गराउन सकिन्छ ताकि अन्य पाहुनालाई कोठा बेच्न सकियोस्।</li>
+    </ul>
+  </div>
+
+  <!-- भाग ५: सेल्फ चेक-इन QR -->
+  <div class="section">
+    <h2 class="section-title">📱 ५. कन्ट्याक्टलेस पाहुना सेल्फ चेक-इन QR</h2>
+    <p>
+      काउन्टरमा भीडभाड हुँदा वा विदेशी पर्यटकहरूले आफ्नै मोबाइलबाट फारम भर्न चाहेमा:
+    </p>
+    <ul>
+      <li>प्रणालीमा रहेको <strong>"Guest QR Self Check-In"</strong> खोलेर काउन्टरको स्ट्यान्डी (Standee) मा देखाउनुहोस्।</li>
+      <li>पाहुनाले क्यामेराले QR स्क्यान गर्नासाथ आफ्नै मोबाइलमा फारम खुल्छ, जहाँ उनले पासपोर्टको फोटो खिचेर अपलोड गर्न र विवरण भर्न सक्छन्।</li>
+    </ul>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- भाग ६: बिलिङ र भ्याट रसिद -->
+  <div class="section">
+    <h2 class="section-title">💳 ६. चेक-आउट, बिलिङ र नेपाल भ्याट रसिद (Billing & Settlement)</h2>
+    <p>पाहुना चेक-आउट हुने बेला <strong>"Billing & Invoices"</strong> वा फ्रन्ट डेस्कबाट चेक-आउट गरिन्छ:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>क्षेत्र</th>
+          <th>विवरण</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>कोठा भाडा हिसाब</strong></td>
+          <td>रु. (NPR) र डलर ($ USD) दुवै दरमा स्वतः हिसाब हुन्छ।</td>
+        </tr>
+        <tr>
+          <td><strong>१३% भ्याट (VAT)</strong></td>
+          <td>नेपाल सरकारको नियमानुसार १३% भ्याट स्वतः जोडिन्छ।</td>
+        </tr>
+        <tr>
+          <td><strong>भुक्तानी माध्यम</strong></td>
+          <td>eSewa, Khalti, Cash NPR, Cash USD वा Visa/MasterCard छनोट गर्नुहोस्।</td>
+        </tr>
+        <tr>
+          <td><strong>प्रिन्ट रसिद</strong></td>
+          <td><strong>"Print Invoice"</strong> थिचेर आधिकारिक होटल शेरपा सोलको बिल ग्राहकलाई दिनुहोस्।</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      भुक्तानी सम्पन्न भएपछि कोठा स्वतः <strong>"Cleaning (सफाई गर्नुपर्ने)"</strong> स्थितिमा जान्छ, जसले गर्दा हाउसकिपिङ स्टाफले तुरुन्त कोठा सफा गर्न सक्छन्।
+    </p>
+  </div>
+
+  <!-- भाग ७: विशेष सञ्चालन (लङ-स्टे र साझा किचन) -->
+  <div class="section">
+    <h2 class="section-title">🍳 ७. लङ-स्टे र साझा किचन पास (Specialty Operations)</h2>
+    <ul>
+      <li><strong>Long Stay Management:</strong> १ महिना वा सोभन्दा बढी बस्ने ट्रेकर वा विदेशी पाहुनाको लागि मासिक भाडा, सम्झौता र सेक्युरिटी डिपोजिट रेकर्ड राख्ने।</li>
+      <li><strong>Shared Kitchen Passes:</strong> पाहुनालाई किचन प्रयोगको अनुमति र धरौटी (Deposit) व्यवस्थापन गर्ने।</li>
+      <li><strong>Housekeeping:</strong> कोठा सफा भएपछि १-क्लिकमा "Clean" चिन्ह लगाएर नयाँ पाहुनाका लागि कोठा तयार गर्ने।</li>
+    </ul>
+  </div>
+
+  <!-- भाग ८: ब्याकग्राउन्ड अटोमेसन -->
+  <div class="section">
+    <h2 class="section-title">🤖 ८. पूर्ण स्वचालित प्रणाली (Automatic Features)</h2>
+    <p>स्टाफले केही नगरे पनि प्रणालीले ब्याकग्राउन्डमा निम्न कार्य आफैं गर्छ:</p>
+    <ul>
+      <li><strong>स्वचालित नाइट अडिट:</strong> मध्यरात १२ बजे दैनिक आम्दानी, अकुपेन्सी % र वित्तीय विवरण आफैं सुरक्षित हुन्छ।</li>
+      <li><strong>इमेल सूचना:</strong> कुनै पनि नयाँ बुकिङ आउनासाथ होटलको इमेल (info@hotelsherpasoul.com) मा स्वतः अलर्ट जान्छ।</li>
+      <li><strong>OTA सिंक:</strong> ५ वटै प्लेटफर्महरूमा कोठा बुक हुँदा वा रद्द हुँदा १.२ सेकेन्डमै सिंक हुन्छ।</li>
+    </ul>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    होटल शेरपा सोल प्रा.लि. • ठमेल, काठमाडौँ • आधिकारिक PMS सञ्चालन निर्देशिका २०८३ / 2026 • सर्वाधिकार सुरक्षित
+  </div>
+
+</body>
+</html>

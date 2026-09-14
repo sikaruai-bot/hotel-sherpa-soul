@@ -67,7 +67,7 @@ export default function Dashboard() {
             </span>
           </div>
           <p className="text-sm text-slate-300 mt-1">
-            Bhagawati Marg-26, Thamel, Kathmandu • {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
+            Bhagawati Marg-26, Thamel, Kathmandu • Tel: +977-1-4530311 / 9851068219 • {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
           </p>
         </div>
 

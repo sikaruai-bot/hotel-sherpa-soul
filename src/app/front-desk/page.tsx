@@ -1012,7 +1012,7 @@ export default function FrontDeskPage() {
                   <div>
                     <h2 className="text-lg font-black text-slate-900 tracking-tight">HOTEL SHERPA SOUL</h2>
                     <p className="text-[11px] text-amber-700 font-bold font-mono">PAN: 119205419</p>
-                    <p className="text-[10px] text-slate-500">Bhagawati Marg-26, Thamel, Kathmandu, Nepal</p>
+                    <p className="text-[10px] text-slate-500">Bhagawati Marg-26, Thamel, Kathmandu, Nepal • Tel: +977-1-4530311 / 9851068219</p>
                   </div>
                 </div>
               </div>

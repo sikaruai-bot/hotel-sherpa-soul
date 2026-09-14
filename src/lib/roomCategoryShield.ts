@@ -278,7 +278,7 @@ export function generateRoomFullMessage(options: {
     checkInDate,
     checkOutDate,
     alternatives,
-    hotelContact = '+977 9801234567',
+    hotelContact = '+977-1-4530311 / 9851068219',
   } = options;
 
   let altListNepali = '';

@@ -69,15 +69,15 @@ export const COMMUNICATION_TEMPLATES: Record<string, (d: any) => { subject: stri
   // 8. Hotel Location & Arrival Map (6h)
   HOTEL_LOCATION_MAP: (d) => ({
     subject: `Directions & Front Desk Contacts - Hotel Sherpa Soul, Thamel`,
-    body: `We are ready to welcome you today! Hotel Sherpa Soul is located on Bhagawati Marg -26, Thamel, Kathmandu. Google Maps: https://maps.google.com/?q=Hotel+Sherpa+Soul+Thamel. Reception 24/7 Hotline: +977 9801234567.`,
-    plainText: `Arriving today? Hotel Sherpa Soul is on Bhagawati Marg -26, Thamel. Google Maps: https://maps.google.com/?q=Hotel+Sherpa+Soul+Thamel. Phone: +977 9801234567.`,
+    body: `We are ready to welcome you today! Hotel Sherpa Soul is located on Bhagawati Marg -26, Thamel, Kathmandu. Google Maps: https://maps.google.com/?q=Hotel+Sherpa+Soul+Thamel. Reception 24/7 Hotline: +977-1-4530311 / 9851068219.`,
+    plainText: `Arriving today? Hotel Sherpa Soul is on Bhagawati Marg -26, Thamel. Google Maps: https://maps.google.com/?q=Hotel+Sherpa+Soul+Thamel. Phone: +977-1-4530311 / 9851068219.`,
   }),
 
   // 9. Airport Pickup Confirmation
   AIRPORT_PICKUP_CONFIRMATION: (d) => ({
     subject: `Tribhuvan International Airport (TIA) Pickup Confirmed - Hotel Sherpa Soul`,
-    body: `Dear ${d.guestName}, our driver will meet you outside TIA International Arrivals with a 'Hotel Sherpa Soul' placard. Flight: ${d.flightNumber || 'Scheduled'}, Pickup Time: ${d.pickupTime || 'Flight Arrival'}. Driver contact: +977 9801234567.`,
-    plainText: `TIA Airport Pickup Confirmed for ${d.guestName}! Driver waiting outside arrivals with Hotel Sherpa Soul sign. Phone: +977 9801234567.`,
+    body: `Dear ${d.guestName}, our driver will meet you outside TIA International Arrivals with a 'Hotel Sherpa Soul' placard. Flight: ${d.flightNumber || 'Scheduled'}, Pickup Time: ${d.pickupTime || 'Flight Arrival'}. Reception / Driver contact: +977-1-4530311 / 9851068219.`,
+    plainText: `TIA Airport Pickup Confirmed for ${d.guestName}! Driver waiting outside arrivals with Hotel Sherpa Soul sign. Phone: +977-1-4530311 / 9851068219.`,
   }),
 
   // 10. Wi-Fi & Hotel Guide (On Check-In)

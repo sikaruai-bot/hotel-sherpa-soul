@@ -67,7 +67,7 @@ export async function POST(request: Request) {
         hotelName: 'Hotel Sherpa Soul',
         officialEmail: officialEmail || 'info@hotelsherpasoul.com',
         managerEmail: managerEmail || 'manager@hotelsherpasoul.com',
-        phone: phone || '+977 9801234567',
+        phone: phone || '+977-1-4530311 / 9851068219',
         notifyOnBooking: notifyOnBooking !== false,
         notifyGuestOnBooking: notifyGuestOnBooking !== false,
         notifyOnRoomFull: notifyOnRoomFull !== false,

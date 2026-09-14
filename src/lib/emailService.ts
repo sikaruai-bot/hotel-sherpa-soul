@@ -33,7 +33,7 @@ export async function getHotelSettings() {
           hotelName: 'Hotel Sherpa Soul',
           officialEmail: process.env.HOTEL_OFFICIAL_EMAIL || 'info@hotelsherpasoul.com',
           managerEmail: process.env.HOTEL_MANAGER_EMAIL || 'manager@hotelsherpasoul.com',
-          phone: '+977 9801234567',
+          phone: '+977-1-4530311 / 9851068219',
           address: 'Bhagawati Marg -26, Thamel, Kathmandu, Nepal',
           notifyOnBooking: true,
           notifyGuestOnBooking: true,
@@ -50,7 +50,7 @@ export async function getHotelSettings() {
       hotelName: 'Hotel Sherpa Soul',
       officialEmail: process.env.HOTEL_OFFICIAL_EMAIL || 'info@hotelsherpasoul.com',
       managerEmail: process.env.HOTEL_MANAGER_EMAIL || 'manager@hotelsherpasoul.com',
-      phone: '+977 9801234567',
+      phone: '+977-1-4530311 / 9851068219',
       address: 'Bhagawati Marg -26, Thamel, Kathmandu, Nepal',
       notifyOnBooking: true,
       notifyGuestOnBooking: true,
@@ -186,7 +186,7 @@ export async function sendBookingNotificationToOfficialMail(booking: BookingEmai
         </div>
 
         <div class="footer">
-          Hotel Sherpa Soul PMS • Bhagawati Marg -26, Thamel, Kathmandu • Phone: +977 9801234567<br>
+          Hotel Sherpa Soul PMS • Bhagawati Marg -26, Thamel, Kathmandu • Phone: +977-1-4530311 / 9851068219<br>
           यो सन्देश आधिकारिक होटल इमेल (${officialEmail}) मा स्वचालित रूपमा पठाइएको हो।
         </div>
       </div>
