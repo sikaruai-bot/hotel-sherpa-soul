@@ -22,10 +22,12 @@ import {
   AlertOctagon,
   History,
   X,
-  RotateCcw
+  RotateCcw,
+  Upload,
+  FileText
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePms } from '@/context/PmsContext';
+import { usePms, GuestIdType } from '@/context/PmsContext';
 import LiveCameraCaptureModal from '@/components/LiveCameraCaptureModal';
 
 function NewReservationForm() {
@@ -38,7 +40,10 @@ function NewReservationForm() {
     email: '',
     phone: '',
     nationality: 'Nepalese',
+    idType: 'Citizenship (नागरिकता)' as GuestIdType,
     passportNumber: '',
+    idIssuedPlace: '',
+    address: '',
     photoUrl: '',
     checkInDate: new Date().toISOString().split('T')[0],
     checkOutDate: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
@@ -54,12 +59,51 @@ function NewReservationForm() {
   const [success, setSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // ID-First & Biometric Live Photo State
+  // ID Document File Upload & Camera State
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [uploadingId, setUploadingId] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isLookingUpGuest, setIsLookingUpGuest] = useState(false);
   const [guestLookupData, setGuestLookupData] = useState<any | null>(null);
   const [showStaysTimeline, setShowStaysTimeline] = useState(false);
   const [blacklistOverride, setBlacklistOverride] = useState(false);
+
+  // Upload ID document / citizenship / passport file
+  const handleIdFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingId(true);
+    try {
+      const data = new FormData();
+      data.append('file', file);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: data,
+      });
+      const json = await res.json();
+      if (json.success && json.data?.url) {
+        setFormData(prev => ({ ...prev, photoUrl: json.data.url }));
+      } else {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === 'string') {
+            setFormData(prev => ({ ...prev, photoUrl: reader.result as string }));
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    } catch {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          setFormData(prev => ({ ...prev, photoUrl: reader.result as string }));
+        }
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setUploadingId(false);
+    }
+  };
 
   // Prefill room and checkIn dates from URL search params when clicked from calendar/tape-chart
   useEffect(() => {
@@ -125,7 +169,10 @@ function NewReservationForm() {
       email: g.email || prev.email,
       phone: g.phoneNumber || prev.phone,
       nationality: g.nationality || prev.nationality,
+      idType: (g.idType as GuestIdType) || prev.idType,
       passportNumber: g.passportNumber || g.idNumber || prev.passportNumber,
+      idIssuedPlace: g.idIssuedPlace || prev.idIssuedPlace,
+      address: g.address || prev.address,
       photoUrl: g.photoUrl || prev.photoUrl,
     }));
   };
@@ -210,7 +257,11 @@ function NewReservationForm() {
       email: formData.email.trim(),
       phone: formData.phone.trim(),
       nationality: formData.nationality.trim(),
+      idType: formData.idType,
+      idNumber: formData.passportNumber.trim(),
       passportNumber: formData.passportNumber.trim(),
+      idIssuedPlace: formData.idIssuedPlace.trim(),
+      address: formData.address.trim(),
       photoUrl: formData.photoUrl || undefined,
       roomNumber: formData.roomNumber,
       roomType: selectedRoom ? selectedRoom.type : 'Standard Double',
@@ -637,28 +688,122 @@ function NewReservationForm() {
 
           {/* Input Fields Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5 md:col-span-2">
-              <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                <span>सरकारी परिचयपत्र / नागरिकता / राहदानी नम्बर (ID-First Primary Key) *</span>
-                <span className="text-[11px] font-normal text-purple-700">फोन नम्बर फेरे पनि यसबाट पुरानो रेकर्ड पत्ता लाग्छ</span>
+            {/* ID Document Type Dropdown */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">
+                ID Document Type (परिचयपत्रको प्रकार) *
               </label>
-              <div className="relative">
-                <input 
-                  type="text" 
-                  value={formData.passportNumber}
-                  onChange={e => setFormData({ ...formData, passportNumber: e.target.value })}
-                  className="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-purple-600 text-sm font-semibold pl-3 pr-24" 
-                  placeholder="नागरिकता नम्बर / Passport No. / National ID / Driving License" 
+              <select
+                value={formData.idType}
+                onChange={e => setFormData({ ...formData, idType: e.target.value as GuestIdType })}
+                className="w-full p-2.5 bg-white border border-slate-200 rounded-xl outline-none focus:border-purple-600 text-xs font-bold text-slate-800"
+              >
+                <option value="Citizenship (नागरिकता)">Citizenship (नागरिकता प्रमाणपत्र - Nepali)</option>
+                <option value="Passport">Passport (राहदानी / पासपोर्ट - Foreign Tourists)</option>
+                <option value="National ID (राष्ट्रिय परिचयपत्र)">National ID (राष्ट्रिय परिचयपत्र - NID)</option>
+                <option value="Driving License">Driving License (सवारी चालक अनुमतिपत्र)</option>
+                <option value="Voter ID">Voter ID (मतदाता परिचयपत्र)</option>
+                <option value="PAN Card">PAN Card (स्थायी लेखा नम्बर)</option>
+                <option value="Other Official ID">Other Official Government ID (अन्य)</option>
+              </select>
+            </div>
+
+            {/* ID / Document Number */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                <span>{formData.idType} Number *</span>
+                <span className="text-[11px] font-normal text-purple-700">Primary Key</span>
+              </label>
+              <input 
+                type="text" 
+                value={formData.passportNumber}
+                onChange={e => setFormData({ ...formData, passportNumber: e.target.value })}
+                className="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-purple-600 text-sm font-semibold" 
+                placeholder={
+                  formData.idType === 'Passport' ? 'e.g. PP12345678' :
+                  formData.idType.includes('Citizenship') ? 'e.g. 27-01-75-01234' :
+                  formData.idType.includes('National ID') ? 'e.g. 10-digit NID' :
+                  'Enter document ID'
+                } 
+              />
+            </div>
+
+            {/* Issued District / Country */}
+            <div className="space-y-1.5 md:col-span-2">
+              <label className="text-xs font-bold text-slate-700 block">
+                Issued District / Country (जारी जिल्ला / देश)
+              </label>
+              <input 
+                type="text" 
+                value={formData.idIssuedPlace}
+                onChange={e => setFormData({ ...formData, idIssuedPlace: e.target.value })}
+                className="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-purple-600 text-sm" 
+                placeholder="e.g. Solukhumbu / Kathmandu / USA" 
+              />
+            </div>
+
+            {/* ID Document & Photo Upload Bar */}
+            <div className="md:col-span-2 p-3.5 bg-purple-50/80 border border-purple-200 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                {formData.photoUrl ? (
+                  <div className="w-12 h-12 rounded-xl overflow-hidden border-2 border-purple-500 shrink-0 bg-slate-900">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={formData.photoUrl} alt="Guest ID / Photo" className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 border border-purple-300 text-purple-700 flex items-center justify-center shrink-0">
+                    <Upload size={18} />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                    <span>{formData.photoUrl ? '✓ परिचयपत्र / फोटो संलग्न (ID Document Attached)' : 'पाहुनाको परिचयपत्र वा फोटो (Upload ID / Live Photo)'}</span>
+                  </p>
+                  <p className="text-[10px] text-purple-700 truncate">
+                    {formData.photoUrl ? 'GRC कार्ड तथा होटल सिस्टममा सुरक्षित हुनेछ।' : 'नागरिकता/पासपोर्टको फोटो वा फाइल अपलोड गर्नुहोस् वा क्यामेराबाट खिच्नुहोस्'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*,application/pdf"
+                  onChange={handleIdFileUpload}
+                  className="hidden"
                 />
                 <button
                   type="button"
-                  onClick={() => setIsCameraOpen(true)}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-purple-100 hover:bg-purple-200 text-purple-800 text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 transition"
-                  title="लाइभ फोटो खिच्नुहोस्"
+                  disabled={uploadingId}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-1 bg-white hover:bg-purple-50 text-purple-800 border border-purple-300 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50"
+                  title="नागरिकता, पासपोर्ट वा परिचयपत्र फाइल अपलोड गर्नुहोस्"
                 >
-                  <Camera size={12} />
+                  <Upload size={13} />
+                  <span>{uploadingId ? 'अपलोड हुँदै...' : 'कागजात अपलोड (Upload File)'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsCameraOpen(true)}
+                  className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                  title="वेबक्याम वा मोबाइल क्यामेराबाट फोटो खिच्नुहोस्"
+                >
+                  <Camera size={13} />
                   <span>Live Photo</span>
                 </button>
+
+                {formData.photoUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, photoUrl: '' })}
+                    className="p-1.5 bg-white border border-rose-200 rounded-xl text-rose-600 hover:bg-rose-50 transition"
+                    title="फोटो हटाउनुहोस् (Remove)"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -705,6 +850,18 @@ function NewReservationForm() {
                 onChange={e => setFormData({ ...formData, nationality: e.target.value })}
                 className="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-purple-600 text-sm" 
                 placeholder="e.g. Nepalese, French, American" 
+              />
+            </div>
+
+            {/* Permanent Address */}
+            <div className="space-y-1.5 md:col-span-2">
+              <label className="text-xs font-bold text-slate-700">Permanent Address (स्थायी ठेगाना) *</label>
+              <input 
+                type="text" 
+                value={formData.address}
+                onChange={e => setFormData({ ...formData, address: e.target.value })}
+                className="w-full p-2.5 border border-slate-200 rounded-xl outline-none focus:border-purple-600 text-sm" 
+                placeholder="e.g. Pokhara-6, Kaski or Namche Bazaar, Solukhumbu" 
               />
             </div>
           </div>

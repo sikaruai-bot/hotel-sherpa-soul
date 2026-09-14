@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   LogIn, 
   LogOut, 
@@ -13,22 +13,23 @@ import {
   ShieldCheck, 
   CreditCard, 
   Printer, 
-  X,
-  UserCheck,
-  QrCode,
-  MapPin,
-  Compass,
-  Phone,
-  Mail,
-  User,
-  Check,
-  Key,
-  Users,
-  UserX,
-  Camera,
-  AlertOctagon,
-  Sparkles,
-  RotateCcw
+  X, 
+  UserCheck, 
+  QrCode, 
+  MapPin, 
+  Compass, 
+  Phone, 
+  Mail, 
+  User, 
+  Check, 
+  Key, 
+  Users, 
+  UserX, 
+  Camera, 
+  Upload, 
+  AlertOctagon, 
+  Sparkles, 
+  RotateCcw 
 } from 'lucide-react';
 import { usePms, Reservation, GuestIdType, PurposeOfVisitType } from '@/context/PmsContext';
 import SelfCheckinQrModal from '@/components/SelfCheckinQrModal';
@@ -62,6 +63,44 @@ export default function FrontDeskPage() {
   const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [keyHandedOver, setKeyHandedOver] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingId, setUploadingId] = useState(false);
+
+  const handleIdFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingId(true);
+    try {
+      const data = new FormData();
+      data.append('file', file);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: data,
+      });
+      const json = await res.json();
+      if (json.success && json.data?.url) {
+        setGuestPhotoUrl(json.data.url);
+      } else {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === 'string') {
+            setGuestPhotoUrl(reader.result as string);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    } catch {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          setGuestPhotoUrl(reader.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setUploadingId(false);
+    }
+  };
 
   // Full Details / GRC Modal State
   const [selectedResForDetails, setSelectedResForDetails] = useState<Reservation | null>(null);
@@ -456,8 +495,8 @@ export default function FrontDeskPage() {
                 </div>
               </div>
 
-              {/* Live Camera Photo & ID Snapshot Bar */}
-              <div className="p-3.5 bg-purple-50/80 border border-purple-200 rounded-2xl flex items-center justify-between gap-3">
+              {/* Live Camera Photo & ID Document Snapshot Bar */}
+              <div className="p-3.5 bg-purple-50/80 border border-purple-200 rounded-2xl flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   {guestPhotoUrl ? (
                     <div className="w-12 h-12 rounded-xl overflow-hidden border-2 border-purple-500 shrink-0 bg-slate-900">
@@ -466,28 +505,47 @@ export default function FrontDeskPage() {
                     </div>
                   ) : (
                     <div className="w-10 h-10 rounded-xl bg-purple-100 border border-purple-300 text-purple-700 flex items-center justify-center shrink-0">
-                      <Camera size={20} />
+                      <Upload size={20} />
                     </div>
                   )}
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
-                      <span>{guestPhotoUrl ? '✓ लाइभ फोटो संलग्न (Live Photo Captured)' : 'पाहुनाको प्रत्यक्ष फोटो (Guest Live Photo)'}</span>
+                      <span>{guestPhotoUrl ? '✓ परिचयपत्र / फोटो संलग्न (ID Attached)' : 'पाहुनाको परिचयपत्र वा फोटो (Guest ID / Photo)'}</span>
                     </p>
                     <p className="text-[10px] text-purple-700 truncate">
-                      {guestPhotoUrl ? 'GRC कार्ड र प्रहरी अभिलेखमा सुरक्षित हुनेछ।' : 'वेबक्याम वा मोबाइलबाट १-क्लिकमा फोटो खिच्नुहोस्'}
+                      {guestPhotoUrl ? 'GRC कार्ड र प्रहरी अभिलेखमा सुरक्षित हुनेछ।' : 'नागरिकता/पासपोर्ट फाइल अपलोड वा क्यामेराबाट १-क्लिकमा फोटो खिच्नुहोस्'}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*,application/pdf"
+                    onChange={handleIdFileUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    disabled={uploadingId}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-1 bg-white hover:bg-purple-50 text-purple-800 border border-purple-300 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50"
+                    title="नागरिकता, राहदानी वा परिचयपत्र फाइल अपलोड गर्नुहोस्"
+                  >
+                    <Upload size={13} />
+                    <span>{uploadingId ? 'अपलोड हुँदै...' : 'कागजात अपलोड (File)'}</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => setIsLiveCameraOpen(true)}
                     className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
                   >
                     <Camera size={13} />
-                    <span>{guestPhotoUrl ? 'फेरि खिच्नुहोस्' : 'फोटो खिच्नुहोस्'}</span>
+                    <span>{guestPhotoUrl ? 'फेरि खिच्नुहोस्' : 'Live Photo'}</span>
                   </button>
+
                   {guestPhotoUrl && (
                     <button
                       type="button"
@@ -669,13 +727,13 @@ export default function FrontDeskPage() {
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Permanent Home Address</label>
+                  <div className="sm:col-span-3">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">Permanent Address (स्थायी ठेगाना) *</label>
                     <input 
                       type="text" 
                       value={address}
                       onChange={e => setAddress(e.target.value)}
-                      placeholder="Street, City, State / Country"
+                      placeholder="e.g. Pokhara-6, Kaski or Namche Bazaar, Solukhumbu"
                       className="w-full p-2.5 bg-white border border-slate-200 rounded-xl outline-none font-medium text-slate-900 text-xs focus:border-blue-600"
                     />
                   </div>

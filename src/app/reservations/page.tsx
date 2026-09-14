@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { 
   Calendar as CalendarIcon, 
   ChevronLeft, 
@@ -28,11 +28,14 @@ import {
   UserX,
   RefreshCw,
   Zap,
-  QrCode
+  QrCode,
+  Upload,
+  Camera
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePms, Reservation, Room, GuestIdType, PurposeOfVisitType } from '@/context/PmsContext';
 import SelfCheckinQrModal from '@/components/SelfCheckinQrModal';
+import LiveCameraCaptureModal from '@/components/LiveCameraCaptureModal';
 
 export default function ReservationsPage() {
   const { reservations, rooms, checkInGuest, checkOutGuest, releaseNoShow, scanAndReleaseNoShows } = usePms();
@@ -91,10 +94,51 @@ export default function ReservationsPage() {
   const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [keyHandedOver, setKeyHandedOver] = useState(true);
+  const [guestPhotoUrl, setGuestPhotoUrl] = useState('');
+  const [isLiveCameraOpen, setIsLiveCameraOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingId, setUploadingId] = useState(false);
+
+  const handleIdFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingId(true);
+    try {
+      const data = new FormData();
+      data.append('file', file);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: data,
+      });
+      const json = await res.json();
+      if (json.success && json.data?.url) {
+        setGuestPhotoUrl(json.data.url);
+      } else {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === 'string') {
+            setGuestPhotoUrl(reader.result as string);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    } catch {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          setGuestPhotoUrl(reader.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setUploadingId(false);
+    }
+  };
 
   const openCheckInModal = (res: Reservation) => {
     setCheckInRes(res);
     setGuestFullName(res.guestName || '');
+    setGuestPhotoUrl(res.photoUrl || '');
     const isNepali = res.nationality?.toLowerCase() === 'nepali' || res.nationality?.toLowerCase() === 'nepal';
     setIdType(res.idType || (isNepali ? 'Citizenship (नागरिकता)' : 'Passport'));
     setIdNumber(res.idNumber || res.passportNumber || '');
@@ -128,6 +172,7 @@ export default function ReservationsPage() {
       idType,
       idNumber: idNumber || checkInRes.passportNumber,
       passportNumber: idNumber || checkInRes.passportNumber,
+      photoUrl: guestPhotoUrl || checkInRes.photoUrl,
       idIssuedPlace,
       nationality,
       phone: guestPhone,
@@ -846,6 +891,70 @@ export default function ReservationsPage() {
 
             {/* Form Sections */}
             <div className="space-y-4 text-xs">
+              {/* Photo & ID Document Upload Bar */}
+              <div className="p-3.5 bg-purple-50/80 border border-purple-200 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  {guestPhotoUrl ? (
+                    <div className="w-12 h-12 rounded-xl overflow-hidden border-2 border-purple-500 shrink-0 bg-slate-900">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={guestPhotoUrl} alt="Guest ID / Photo" className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-purple-100 border border-purple-300 text-purple-700 flex items-center justify-center shrink-0">
+                      <Upload size={20} />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                      <span>{guestPhotoUrl ? '✓ परिचयपत्र / फोटो संलग्न (ID Attached)' : 'पाहुनाको परिचयपत्र वा फोटो (Guest ID / Photo)'}</span>
+                    </p>
+                    <p className="text-[10px] text-purple-700 truncate">
+                      {guestPhotoUrl ? 'GRC कार्ड र प्रहरी अभिलेखमा सुरक्षित हुनेछ।' : 'नागरिकता/पासपोर्ट फाइल अपलोड वा क्यामेराबाट १-क्लिकमा फोटो खिच्नुहोस्'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*,application/pdf"
+                    onChange={handleIdFileUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    disabled={uploadingId}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-1 bg-white hover:bg-purple-50 text-purple-800 border border-purple-300 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50"
+                    title="नागरिकता, राहदानी वा परिचयपत्र फाइल अपलोड गर्नुहोस्"
+                  >
+                    <Upload size={13} />
+                    <span>{uploadingId ? 'अपलोड हुँदै...' : 'कागजात अपलोड (File)'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsLiveCameraOpen(true)}
+                    className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                  >
+                    <Camera size={13} />
+                    <span>{guestPhotoUrl ? 'फेरि खिच्नुहोस्' : 'Live Photo'}</span>
+                  </button>
+
+                  {guestPhotoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setGuestPhotoUrl('')}
+                      className="p-1.5 bg-white border border-rose-200 rounded-xl text-rose-600 hover:bg-rose-50 transition"
+                      title="हटाउनुहोस्"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* 1. Official ID Document Details */}
               <div className="p-4 bg-amber-50/70 border border-amber-200/80 rounded-2xl space-y-3">
                 <h4 className="font-bold text-amber-900 text-xs flex items-center gap-1.5">
@@ -1286,6 +1395,14 @@ export default function ReservationsPage() {
         isOpen={showSelfCheckinQr}
         onClose={() => setShowSelfCheckinQr(false)}
         bookingRef={qrBookingRef}
+      />
+
+      {/* Live Camera Photo Capture Modal */}
+      <LiveCameraCaptureModal
+        isOpen={isLiveCameraOpen}
+        onClose={() => setIsLiveCameraOpen(false)}
+        onCapture={(photoUrl) => setGuestPhotoUrl(photoUrl)}
+        guestName={guestFullName || checkInRes?.guestName || 'Guest'}
       />
     </div>
   );
