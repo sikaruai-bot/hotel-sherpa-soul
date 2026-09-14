@@ -198,7 +198,7 @@ function SelfCheckInContent() {
 
   // Auto-search if URL contains ?q= or ?ref= (e.g. from scanned reservation QR code)
   useEffect(() => {
-    const q = searchParams.get('q') || searchParams.get('ref');
+    const q = searchParams?.get('q') || searchParams?.get('ref');
     if (q && q.trim() && !initialSearchDone) {
       setInitialSearchDone(true);
       setSearchQuery(q.trim());

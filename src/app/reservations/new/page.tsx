@@ -63,8 +63,8 @@ function NewReservationForm() {
 
   // Prefill room and checkIn dates from URL search params when clicked from calendar/tape-chart
   useEffect(() => {
-    const roomParam = searchParams.get('room');
-    const checkInParam = searchParams.get('checkIn');
+    const roomParam = searchParams?.get('room');
+    const checkInParam = searchParams?.get('checkIn');
     if (roomParam || checkInParam) {
       setFormData(prev => {
         const inDate = checkInParam || prev.checkInDate;

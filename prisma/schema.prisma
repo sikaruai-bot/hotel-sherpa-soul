@@ -6,7 +6,6 @@ datasource db {
   provider = "postgresql"
 }
 
-
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -30,37 +29,41 @@ enum Role {
 }
 
 model RoomType {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  capacity    Int
-  bedType     String
-  dailyRate   Float
-  weeklyRate  Float
-  monthlyRate Float
-  rooms       Room[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String            @id @default(uuid())
+  name             String            @unique
+  capacity         Int
+  bedType          String
+  dailyRate        Float
+  weeklyRate       Float
+  monthlyRate      Float
+  rooms            Room[]
+  reservations     Reservation[]
+  reservationRooms ReservationRoom[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
 model Room {
-  id                 String             @id @default(uuid())
-  roomNumber         String             @unique
+  id                 String              @id @default(uuid())
+  roomNumber         String              @unique
   floor              Int
   roomTypeId         String
-  roomType           RoomType           @relation(fields: [roomTypeId], references: [id])
-  status             RoomStatus         @default(AVAILABLE)
-  kitchenEligible    Boolean            @default(false)
-  longStayEligible   Boolean            @default(false)
+  roomType           RoomType            @relation(fields: [roomTypeId], references: [id])
+  status             RoomStatus          @default(AVAILABLE)
+  kitchenEligible    Boolean             @default(false)
+  longStayEligible   Boolean             @default(false)
   currentGuest       String?
   cleaningStaff      String?
   maintenanceNote    String?
   reservations       Reservation[]
+  reservationRooms   ReservationRoom[]
   longStayContracts  LongStayContract[]
   kitchenUsers       KitchenUser[]
   housekeepingTasks  HousekeepingTask[]
   maintenanceTickets MaintenanceTicket[]
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  dailyInventory     RoomInventory[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 }
 
 enum RoomStatus {
@@ -75,54 +78,128 @@ enum RoomStatus {
 }
 
 model Guest {
-  id                String             @id @default(uuid())
-  name              String
-  nationality       String?
-  passportNumber    String?
-  idNumber          String?
-  photoUrl          String?
-  signatureUrl      String?
-  isBlacklisted     Boolean            @default(false)
-  blacklistReason   String?
-  blacklistedAt     DateTime?
-  blacklistedBy     String?
-  email             String?
-  phoneNumber       String?
-  reservations      Reservation[]
-  longStayContracts LongStayContract[]
-  kitchenUsers      KitchenUser[]
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  id                 String             @id @default(uuid())
+  name               String
+  fullName           String?
+  normalizedName     String?
+  nationality        String?
+  passportNumber     String?
+  idNumber           String?
+  idType             String?
+  idNumberHash       String?
+  photoUrl           String?
+  livePhotoReference String?
+  signatureUrl       String?
+  consentStatus      Boolean            @default(false)
+  isBlacklisted      Boolean            @default(false)
+  blacklistReason    String?
+  blacklistedAt      DateTime?
+  blacklistedBy      String?
+  riskStatus         RiskStatus         @default(NORMAL)
+  riskReason         String?
+  previousDueAmount  Float              @default(0)
+  notes              String?
+  riskReviewedBy     String?
+  riskReviewedAt     DateTime?
+  email              String?
+  phoneNumber        String?
+  reservations       Reservation[]
+  longStayContracts  LongStayContract[]
+  kitchenUsers       KitchenUser[]
+  folios             Folio[]
+  unifiedMessages    UnifiedMessage[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([phoneNumber])
+  @@index([email])
+  @@index([idNumber])
+  @@index([idNumberHash])
+  @@index([riskStatus])
+}
+
+enum RiskStatus {
+  NORMAL
+  PAYMENT_ALERT
+  MANAGER_REVIEW
+  DO_NOT_RENT
 }
 
 model Reservation {
-  id              String            @id @default(uuid())
-  otaConfirmNum   String?
-  guestId         String
-  guest           Guest             @relation(fields: [guestId], references: [id])
-  roomId          String
-  room            Room              @relation(fields: [roomId], references: [id])
-  checkInDate     DateTime
-  checkOutDate    DateTime
-  adults          Int               @default(1)
-  children        Int               @default(0)
-  totalAmount     Float
-  paidAmount      Float             @default(0)
-  status          ReservationStatus @default(PENDING)
-  source          BookingSource     @default(DIRECT)
-  specialRequests String?
-  invoices        Invoice[]
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  id                   String             @id @default(uuid())
+  reservationNumber    String?            @unique
+  otaConfirmNum        String?
+  externalBookingId    String?
+  guestId              String
+  guest                Guest              @relation(fields: [guestId], references: [id])
+  roomId               String
+  room                 Room               @relation(fields: [roomId], references: [id])
+  roomTypeId           String?
+  roomType             RoomType?          @relation(fields: [roomTypeId], references: [id])
+  checkInDate          DateTime
+  checkOutDate         DateTime
+  adults               Int                @default(1)
+  children             Int                @default(0)
+  totalAmount          Float
+  paidAmount           Float              @default(0)
+  dueAmount            Float              @default(0)
+  currency             String             @default("NPR")
+  status               ReservationStatus  @default(PENDING)
+  paymentStatus        PaymentStatus      @default(UNPAID)
+  source               BookingSource      @default(DIRECT)
+  cancellationReason   String?
+  specialRequests      String?
+  internalNotes        String?
+  holdExpiresAt        DateTime?
+  selfCheckinToken     String?            @unique
+  selfCheckinExpiresAt DateTime?
+  whatsappThreadId     String?
+  utmSource            String?
+  utmMedium            String?
+  utmCampaign          String?
+  utmContent           String?
+  gclid                String?
+  fbclid               String?
+  createdBy            String?
+  invoices             Invoice[]
+  folio                Folio?
+  rooms                ReservationRoom[]
+  payments             Payment[]
+  automationJobs       AutomationJob[]
+  domainEvents         DomainEvent[]
+  unifiedMessages      UnifiedMessage[]
+  roomInventories      RoomInventory[]
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@unique([source, externalBookingId])
+  @@index([checkInDate, checkOutDate])
+  @@index([guestId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([source])
 }
 
 enum ReservationStatus {
-  CONFIRMED
+  INQUIRY
   PENDING
+  HOLD
+  CONFIRMED
+  MODIFIED
   CANCELLED
   NO_SHOW
   CHECKED_IN
   CHECKED_OUT
+  COMPLETED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  FAILED
+  REFUNDED
+  DISPUTED
 }
 
 enum BookingSource {
@@ -140,6 +217,90 @@ enum BookingSource {
   MANUAL
 }
 
+model ReservationRoom {
+  id            String      @id @default(uuid())
+  reservationId String
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  roomId        String?
+  room          Room?       @relation(fields: [roomId], references: [id])
+  roomTypeId    String
+  roomType      RoomType    @relation(fields: [roomTypeId], references: [id])
+  rate          Float
+  adults        Int         @default(1)
+  children      Int         @default(0)
+  status        String      @default("ASSIGNED")
+  assignedAt    DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([reservationId])
+  @@index([roomId])
+}
+
+model Folio {
+  id                 String      @id @default(uuid())
+  reservationId      String      @unique
+  reservation        Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  guestId            String
+  guest              Guest       @relation(fields: [guestId], references: [id])
+  status             FolioStatus @default(OPEN)
+  totalCharges       Float       @default(0)
+  totalPayments      Float       @default(0)
+  totalDiscounts     Float       @default(0)
+  totalTax           Float       @default(0)
+  totalServiceCharge Float       @default(0)
+  balanceDue         Float       @default(0)
+  currency           String      @default("NPR")
+  items              FolioItem[]
+  payments           Payment[]
+  closedAt           DateTime?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  @@index([reservationId])
+  @@index([guestId])
+}
+
+enum FolioStatus {
+  OPEN
+  CLOSED
+  DISPUTED
+}
+
+model FolioItem {
+  id                String            @id @default(uuid())
+  folioId           String
+  folio             Folio             @relation(fields: [folioId], references: [id], onDelete: Cascade)
+  category          FolioItemCategory
+  description       String
+  quantity          Int               @default(1)
+  unitPrice         Float
+  amount            Float
+  taxRate           Float             @default(0)
+  serviceChargeRate Float             @default(0)
+  source            String            @default("PMS")
+  referenceId       String?
+  createdBy         String?
+  createdAt         DateTime          @default(now())
+
+  @@index([folioId])
+  @@index([category])
+}
+
+enum FolioItemCategory {
+  ROOM_CHARGE
+  RESTAURANT
+  LAUNDRY
+  AIRPORT_TRANSFER
+  EXTRA_SERVICE
+  DISCOUNT
+  TAX
+  SERVICE_CHARGE
+  DEPOSIT
+  REFUND
+  OTHER
+}
+
 model LongStayContract {
   id              String         @id @default(uuid())
   guestId         String
@@ -151,7 +312,7 @@ model LongStayContract {
   monthlyRent     Float
   securityDeposit Float
   kitchenAccess   Boolean        @default(true)
-  depositStatus   String         @default("HELD") // HELD, REFUNDED, DEDUCTED
+  depositStatus   String         @default("HELD")
   rentPaidUntil   DateTime?
   status          ContractStatus @default(ACTIVE)
   notes           String?
@@ -173,12 +334,12 @@ model KitchenUser {
   guest           Guest    @relation(fields: [guestId], references: [id])
   roomId          String
   room            Room     @relation(fields: [roomId], references: [id])
-  passType        String   @default("Long Stay") // Long Stay, Short Stay Add-on
+  passType        String   @default("Long Stay")
   accessStartDate DateTime
   accessEndDate   DateTime
   depositHeld     Float    @default(0)
-  depositStatus   String   @default("HELD") // HELD, REFUNDED, PARTIAL_DEDUCTED
-  status          String   @default("ACTIVE") // ACTIVE, EXPIRED, REVOKED
+  depositStatus   String   @default("HELD")
+  status          String   @default("ACTIVE")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -201,16 +362,16 @@ enum InventoryStatus {
 }
 
 model KitchenIncident {
-  id         String   @id @default(uuid())
+  id           String   @id @default(uuid())
   incidentDate DateTime @default(now())
-  type       String
-  guestName  String
-  roomNumber String
-  costNpr    Float
-  status     String   @default("Pending Review") // Deducted from Deposit, Waived, Pending Review
-  note       String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  type         String
+  guestName    String
+  roomNumber   String
+  costNpr      Float
+  status       String   @default("Pending Review")
+  note         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Invoice {
@@ -221,10 +382,10 @@ model Invoice {
   dueDate       DateTime      @default(now())
   guestName     String?
   roomNumber    String?
-  items         String?       // Stored JSON string of line items
+  items         String?
   subtotal      Float
-  tax           Float         // 13% VAT
-  serviceCharge Float         @default(0) // 10% Service Charge
+  tax           Float
+  serviceCharge Float         @default(0)
   discount      Float         @default(0)
   total         Float
   paidAmount    Float         @default(0)
@@ -243,13 +404,30 @@ enum InvoiceStatus {
 }
 
 model Payment {
-  id            String        @id @default(uuid())
-  invoiceId     String
-  invoice       Invoice       @relation(fields: [invoiceId], references: [id])
-  amount        Float
-  method        PaymentMethod
-  paymentDate   DateTime      @default(now())
-  transactionId String?
+  id                    String              @id @default(uuid())
+  invoiceId             String?
+  invoice               Invoice?            @relation(fields: [invoiceId], references: [id])
+  reservationId         String?
+  reservation           Reservation?        @relation(fields: [reservationId], references: [id])
+  folioId               String?
+  folio                 Folio?              @relation(fields: [folioId], references: [id])
+  amount                Float
+  currency              String              @default("NPR")
+  method                PaymentMethod
+  status                PaymentRecordStatus @default(COMPLETED)
+  provider              String?
+  providerTransactionId String?
+  paymentDate           DateTime            @default(now())
+  transactionId         String?
+  verifiedAt            DateTime?
+  verifiedBy            String?
+  failureReason         String?
+  idempotencyKey        String?             @unique
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @default(now()) @updatedAt
+
+  @@index([reservationId])
+  @@index([folioId])
 }
 
 enum PaymentMethod {
@@ -263,14 +441,231 @@ enum PaymentMethod {
   BANK_TRANSFER
 }
 
+enum PaymentRecordStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  DISPUTED
+}
+
+model RoomInventory {
+  id            String              @id @default(uuid())
+  roomId        String
+  room          Room                @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  date          DateTime
+  status        RoomInventoryStatus @default(AVAILABLE)
+  reservationId String?
+  reservation   Reservation?        @relation(fields: [reservationId], references: [id])
+  heldExpiresAt DateTime?
+  rate          Float?
+  notes         String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@unique([roomId, date])
+  @@index([date])
+  @@index([status])
+}
+
+enum RoomInventoryStatus {
+  AVAILABLE
+  HELD
+  BOOKED
+  OCCUPIED
+  DIRTY
+  CLEAN
+  INSPECTED
+  MAINTENANCE
+  OUT_OF_ORDER
+}
+
+model DomainEvent {
+  id            String       @id @default(uuid())
+  eventId       String       @unique @default(uuid())
+  eventType     String
+  entityType    String
+  entityId      String
+  reservationId String?
+  reservation   Reservation? @relation(fields: [reservationId], references: [id])
+  correlationId String?
+  payload       Json
+  source        String
+  status        EventStatus  @default(PENDING)
+  attempts      Int          @default(0)
+  errorMessage  String?
+  createdAt     DateTime     @default(now())
+  processedAt   DateTime?
+
+  @@index([status])
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+enum EventStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model AutomationJob {
+  id             String       @id @default(uuid())
+  jobType        String
+  eventType      String
+  entityType     String
+  entityId       String
+  reservationId  String?
+  reservation    Reservation? @relation(fields: [reservationId], references: [id])
+  recipient      String?
+  payload        Json
+  scheduledAt    DateTime
+  status         JobStatus    @default(PENDING)
+  attempts       Int          @default(0)
+  maxAttempts    Int          @default(5)
+  lastError      String?
+  idempotencyKey String?      @unique
+  processedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([status, scheduledAt])
+  @@index([jobType])
+  @@index([reservationId])
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  RETRYING
+  FAILED
+  DEAD_LETTER
+  CANCELLED
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   String
+  beforeData Json?
+  afterData  Json?
+  reason     String?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model UnifiedMessage {
+  id                  String               @id @default(uuid())
+  messageId           String               @unique @default(uuid())
+  reservationId       String?
+  reservation         Reservation?         @relation(fields: [reservationId], references: [id])
+  guestId             String?
+  guest               Guest?               @relation(fields: [guestId], references: [id])
+  channel             CommunicationChannel
+  direction           MessageDirection     @default(OUTBOUND)
+  templateName        String?
+  sender              String?
+  recipient           String
+  subject             String?
+  content             String
+  status              MessageStatus        @default(PENDING)
+  provider            String?
+  providerMessageId   String?
+  errorMessage        String?
+  retryCount          Int                  @default(0)
+  requiresStaffAction Boolean              @default(false)
+  assignedStaff       String?
+  isRead              Boolean              @default(false)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  @@index([reservationId])
+  @@index([guestId])
+  @@index([status])
+  @@index([channel])
+  @@index([requiresStaffAction])
+}
+
+enum CommunicationChannel {
+  WHATSAPP
+  EMAIL
+  SMS
+  IN_APP
+  OTA_MESSAGE
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+model NightAuditRecord {
+  id                String    @id @default(uuid())
+  businessDate      DateTime  @unique
+  openedAt          DateTime  @default(now())
+  closedAt          DateTime?
+  closedBy          String?
+  totalRooms        Int       @default(0)
+  occupiedRooms     Int       @default(0)
+  occupancyRate     Float     @default(0)
+  adr               Float     @default(0)
+  revPar            Float     @default(0)
+  roomRevenue       Float     @default(0)
+  totalRevenue      Float     @default(0)
+  paymentsCollected Float     @default(0)
+  outstandingDues   Float     @default(0)
+  noShowsProcessed  Int       @default(0)
+  exceptionsCount   Int       @default(0)
+  summary           Json?
+  isLocked          Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+
+  @@index([businessDate])
+}
+
+model SystemConfig {
+  id                     String   @id @default("default")
+  businessTimezone       String   @default("Asia/Kathmandu")
+  vatRate                Float    @default(0.13)
+  serviceChargeRate      Float    @default(0.10)
+  autoReleaseNoShowHour  Int      @default(18)
+  holdDurationMinutes    Int      @default(15)
+  maxJobRetries          Int      @default(5)
+  reviewRequestDelayHours Int     @default(24)
+  enableWhatsAppBot      Boolean  @default(true)
+  enableEmailNotifs      Boolean  @default(true)
+  enableSmsNotifs        Boolean  @default(false)
+  enableAutoHousekeeping  Boolean  @default(true)
+  metaCapiPixelId        String?
+  metaCapiAccessToken    String?
+  googleAdsConversionId  String?
+  updatedAt              DateTime @updatedAt
+}
+
 model HousekeepingTask {
   id           String     @id @default(uuid())
   roomId       String
   room         Room       @relation(fields: [roomId], references: [id])
-  taskType     String     // Regular Clean, Deep Clean, Turnover Clean, Linen Change
+  taskType     String
   status       TaskStatus @default(PENDING)
-  priority     String     @default("NORMAL") // NORMAL, HIGH, URGENT
-  assignedTo   String?    // Staff Name
+  priority     String     @default("NORMAL")
+  assignedTo   String?
   notes        String?
   scheduledFor DateTime   @default(now())
   createdAt    DateTime   @default(now())
@@ -290,8 +685,8 @@ model MaintenanceTicket {
   room               Room?    @relation(fields: [roomId], references: [id])
   location           String
   issue              String
-  priority           String   @default("Medium") // Low, Medium, Urgent
-  status             String   @default("Open")   // Open, In Progress, Resolved
+  priority           String   @default("Medium")
+  status             String   @default("Open")
   reportedBy         String
   assignedTechnician String?
   reportedAt         DateTime @default(now())
@@ -303,44 +698,44 @@ model Notification {
   id        String   @id @default(uuid())
   title     String
   detail    String
-  type      String   @default("General") // Booking, LongStay, Billing, Kitchen, Maintenance, Channel
-  channel   String   @default("In-App")  // WhatsApp, Email, In-App, SMS
-  status    String   @default("Delivered") // Delivered, Action Required, Resolved
+  type      String   @default("General")
+  channel   String   @default("In-App")
+  status    String   @default("Delivered")
   createdAt DateTime @default(now())
 }
 
 model WebhookEndpoint {
-  id          String       @id @default(uuid())
-  name        String       // e.g. "Zapier Booking Sync", "WhatsApp Bot"
-  url         String
-  secret      String?
-  events      String       // Stored JSON array e.g. '["booking.created", "guest.checked_in"]'
-  isActive    Boolean      @default(true)
-  logs        WebhookLog[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id        String       @id @default(uuid())
+  name      String
+  url       String
+  secret    String?
+  events    String
+  isActive  Boolean      @default(true)
+  logs      WebhookLog[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 }
 
 model WebhookLog {
-  id          String          @id @default(uuid())
-  endpointId  String
-  endpoint    WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
-  event       String
-  status      Int             // HTTP status code (e.g. 200, 500)
-  response    String?
-  payload     String          // Stored JSON payload
-  createdAt   DateTime        @default(now())
+  id         String          @id @default(uuid())
+  endpointId String
+  endpoint   WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  event      String
+  status     Int
+  response   String?
+  payload    String
+  createdAt  DateTime        @default(now())
 }
 
 model OtaConnection {
   id           String    @id @default(uuid())
-  channel      String    // BOOKING_COM, AIRBNB, AGODA, EXPEDIA, TRIP_COM, VRBO, CUSTOM
-  roomNumber   String    // 201, 202, 203, 301, 302, 303, ALL
-  importUrl    String?   // External OTA iCal URL pasted by user
-  exportToken  String    @default(uuid()) // PMS calendar export token
+  channel      String
+  roomNumber   String
+  importUrl    String?
+  exportToken  String    @default(uuid())
   isActive     Boolean   @default(true)
   lastSyncedAt DateTime?
-  syncStatus   String    @default("IDLE") // IDLE, SYNCING, SUCCESS, ERROR
+  syncStatus   String    @default("IDLE")
   syncMessage  String?
   eventsCount  Int       @default(0)
   createdAt    DateTime  @default(now())
@@ -350,14 +745,14 @@ model OtaConnection {
 }
 
 model OtaSyncLog {
-  id          String   @id @default(uuid())
-  channel     String
-  roomNumber  String
-  action      String   // IMPORT_ICAL, EXPORT_ICAL, WEBHOOK_PUSH, RATE_PUSH, MANUAL_SYNC
-  status      String   // SUCCESS, CONFLICT_PREVENTED, ERROR
-  message     String
-  details     String?  // JSON string
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  channel    String
+  roomNumber String
+  action     String
+  status     String
+  message    String
+  details    String?
+  createdAt  DateTime @default(now())
 }
 
 model HotelSetting {
@@ -377,4 +772,3 @@ model HotelSetting {
   smtpSecure           Boolean  @default(false)
   updatedAt            DateTime @updatedAt
 }
-

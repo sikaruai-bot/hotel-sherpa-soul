@@ -22,6 +22,7 @@
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "@types/qrcode": "^1.5.6",
+    "@upstash/redis": "^1.38.4",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "lucide-react": "^1.41.0",
@@ -46,6 +47,6 @@
     "tailwindcss": "^4",
     "tsx": "^4.19.3",
     "typescript": "^5",
-    "vercel": "^59.11.7"
+    "vercel": "^54.17.3"
   }
 }

@@ -1,23 +1,22 @@
 import { NextResponse } from 'next/server';
+import { executeNightAudit } from '@/lib/nightAuditService';
 import { prisma } from '@/lib/prisma';
-import { autoReleaseExpiredNoShows } from '@/lib/autoReleaseNoShows';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  return executeNightAudit();
+  return runNightAuditCron();
 }
 
 export async function POST() {
-  return executeNightAudit();
+  return runNightAuditCron();
 }
 
-async function executeNightAudit() {
+async function runNightAuditCron() {
   try {
     const today = new Date();
 
-    // 1. Auto-release expired un-checked-in bookings (No-Shows) to free rooms for new guests
-    const noShowSweep = await autoReleaseExpiredNoShows(18);
-
-    // 2. Expire past kitchen passes
+    // 1. Expire past kitchen passes
     const expiredPasses = await prisma.kitchenUser.updateMany({
       where: {
         accessEndDate: { lt: today },
@@ -28,39 +27,21 @@ async function executeNightAudit() {
       },
     });
 
-    // 2. Count occupied rooms & calculate occupancy
-    const totalRooms = await prisma.room.count();
-    const occupiedRooms = await prisma.room.count({
-      where: {
-        OR: [{ status: 'OCCUPIED' }, { status: 'LONG_STAY_OCCUPIED' }],
-      },
-    });
-
-    const occupancyPct = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
-
-    // 3. Log audit notification
-    await prisma.notification.create({
-      data: {
-        title: 'Daily Night Audit Completed',
-        detail: `Night audit finished. Current Occupancy: ${occupancyPct}% (${occupiedRooms}/${totalRooms} rooms). Expired kitchen passes updated: ${expiredPasses.count}.`,
-        type: 'General',
-        channel: 'In-App',
-        status: 'Delivered',
-      },
+    // 2. Execute comprehensive night audit (auto-release no-shows, post room rates, calculate ADR/RevPAR)
+    const report = await executeNightAudit({
+      forceClose: false,
+      staffUserId: 'CRON_NIGHT_AUDIT',
     });
 
     return NextResponse.json({
       success: true,
       data: {
-        auditTimestamp: today.toISOString(),
-        occupancyRate: `${occupancyPct}%`,
-        occupiedRooms,
-        totalRooms,
+        ...report,
         expiredPassesUpdated: expiredPasses.count,
       },
     });
   } catch (error: any) {
-    console.error('Night audit error:', error);
+    console.error('Night audit cron error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

@@ -17,7 +17,10 @@ import {
   Bell,
   BrainCircuit,
   Zap,
-  QrCode
+  QrCode,
+  ShieldAlert,
+  MessageSquare,
+  Sliders
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -114,6 +117,29 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarPr
           OTA & Channels
         </div>
 
+        <Link href="/admin/exceptions" className={getLinkClass('/admin/exceptions', 'text-rose-400')}>
+          <div className="flex items-center gap-3">
+            <ShieldAlert size={18} className="text-rose-400" />
+            <span className="text-sm font-semibold">Exceptions & Conflicts</span>
+          </div>
+          <span className="text-[10px] bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded font-mono font-bold">Alert</span>
+        </Link>
+
+        <Link href="/admin/inbox" className={getLinkClass('/admin/inbox', 'text-emerald-300')}>
+          <div className="flex items-center gap-3">
+            <MessageSquare size={18} className="text-emerald-400" />
+            <span className="text-sm font-medium">Unified Inbox</span>
+          </div>
+          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-mono font-bold">Live</span>
+        </Link>
+
+        <Link href="/admin/automation-settings" className={getLinkClass('/admin/automation-settings', 'text-slate-300')}>
+          <div className="flex items-center gap-3">
+            <Sliders size={18} />
+            <span className="text-sm font-medium">Automation Rules</span>
+          </div>
+        </Link>
+
         <Link href="/channel-manager" className={getLinkClass('/channel-manager', 'text-blue-300')}>
           <div className="flex items-center gap-3">
             <Globe size={18} />
@@ -124,14 +150,14 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarPr
         <Link href="/notifications" className={getLinkClass('/notifications')}>
           <div className="flex items-center gap-3">
             <Bell size={18} />
-            <span className="text-sm font-medium">Alerts & WhatsApp</span>
+            <span className="text-sm font-medium">Alerts & Logs</span>
           </div>
         </Link>
 
         <Link href="/automation" className={getLinkClass('/automation', 'text-amber-300')}>
           <div className="flex items-center gap-3">
             <Zap size={18} />
-            <span className="text-sm font-medium">Automations & Webhooks</span>
+            <span className="text-sm font-medium">Webhooks Hub</span>
           </div>
         </Link>
 

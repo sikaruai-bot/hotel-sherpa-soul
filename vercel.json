@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/night-audit",
+      "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/internal/jobs/process",
+      "schedule": "0 2 * * *"
+    }
+  ]
+}
