@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ReservationStatus, RoomStatus } from '@prisma/client';
 import { emitPmsEvent } from '@/lib/events';
+import { releaseRoomInventory } from '@/lib/inventoryService';
 
 export async function GET(
   request: Request,
@@ -159,6 +160,9 @@ export async function PATCH(
         },
       });
 
+      // Release inventory lock so room can be booked for future dates
+      await releaseRoomInventory(id);
+
       // Automatically create housekeeping task
       await prisma.housekeepingTask.create({
         data: {
@@ -196,6 +200,9 @@ export async function PATCH(
           currentGuest: null,
         },
       });
+
+      // Immediately release inventory locks for this reservation
+      await releaseRoomInventory(id);
 
       await prisma.notification.create({
         data: {

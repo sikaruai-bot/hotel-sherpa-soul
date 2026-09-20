@@ -7,8 +7,8 @@ export interface AddFolioItemInput {
   description: string;
   quantity?: number;
   unitPrice: number;
-  taxRate?: number; // Default 0.13 (13% VAT in Nepal)
-  serviceChargeRate?: number; // Default 0.10 (10% Service Charge)
+  taxRate?: number; // Default 0 (Hotel registered in PAN only - Non-VAT)
+  serviceChargeRate?: number; // Default 0
   source?: string;
   referenceId?: string | null;
   createdBy?: string | null;
@@ -58,7 +58,7 @@ export async function getOrCreateFolio(reservationId: string, guestId: string, t
 }
 
 /**
- * Recalculates all totals, VAT, service charges, payments, and balance due for a folio
+ * Recalculates all totals, taxes, service charges, payments, and balance due for a folio
  */
 export async function recalculateFolio(folioId: string, tx?: any) {
   const db = tx || prisma;

@@ -26,17 +26,54 @@ export default function RoomsPage() {
   const getStatusBadge = (status: Room['status']) => {
     switch (status) {
       case 'AVAILABLE':
-        return { bg: 'bg-emerald-50 border-emerald-200 text-emerald-800', label: 'Available', dot: 'bg-emerald-500' };
+        return { 
+          bg: 'bg-emerald-50/90 border-emerald-300 text-emerald-950', 
+          label: 'Vacant (खाली)', 
+          dot: 'bg-emerald-500 ring-2 ring-emerald-300',
+          badgeBg: 'bg-emerald-100/90 text-emerald-900 border border-emerald-300'
+        };
       case 'OCCUPIED':
-        return { bg: 'bg-blue-50 border-blue-200 text-blue-800', label: 'Occupied', dot: 'bg-blue-500' };
-      case 'LONG_STAY':
-        return { bg: 'bg-purple-50 border-purple-200 text-purple-800', label: 'Long Stay', dot: 'bg-purple-500' };
+        return { 
+          bg: 'bg-blue-50/90 border-blue-300 text-blue-950', 
+          label: 'Occupied (व्यस्त)', 
+          dot: 'bg-blue-600 ring-2 ring-blue-300',
+          badgeBg: 'bg-blue-100/90 text-blue-900 border border-blue-300'
+        };
+      case 'RESERVED':
+        return { 
+          bg: 'bg-purple-50/90 border-purple-300 text-purple-950', 
+          label: 'Reserved (आरक्षित)', 
+          dot: 'bg-purple-600 ring-2 ring-purple-300',
+          badgeBg: 'bg-purple-100/90 text-purple-900 border border-purple-300'
+        };
       case 'CLEANING_REQUIRED':
-        return { bg: 'bg-amber-50 border-amber-200 text-amber-800', label: 'Cleaning Needed', dot: 'bg-amber-500' };
+        return { 
+          bg: 'bg-amber-50/90 border-amber-300 text-amber-950', 
+          label: 'Cleaning (सरसफाइ प्रक्रिया)', 
+          dot: 'bg-amber-500 ring-2 ring-amber-300',
+          badgeBg: 'bg-amber-100/90 text-amber-900 border border-amber-300'
+        };
+      case 'LONG_STAY':
+        return { 
+          bg: 'bg-indigo-50/90 border-indigo-300 text-indigo-950', 
+          label: 'Long Stay (दीर्घकालीन)', 
+          dot: 'bg-indigo-600 ring-2 ring-indigo-300',
+          badgeBg: 'bg-indigo-100/90 text-indigo-900 border border-indigo-300'
+        };
       case 'UNDER_MAINTENANCE':
-        return { bg: 'bg-rose-50 border-rose-200 text-rose-800', label: 'Under Maintenance', dot: 'bg-rose-500' };
+        return { 
+          bg: 'bg-rose-50/90 border-rose-300 text-rose-950', 
+          label: 'Under Maintenance (मर्मत)', 
+          dot: 'bg-rose-600 ring-2 ring-rose-300',
+          badgeBg: 'bg-rose-100/90 text-rose-900 border border-rose-300'
+        };
       default:
-        return { bg: 'bg-slate-50 border-slate-200 text-slate-800', label: status, dot: 'bg-slate-500' };
+        return { 
+          bg: 'bg-slate-50 border-slate-300 text-slate-800', 
+          label: status, 
+          dot: 'bg-slate-500',
+          badgeBg: 'bg-slate-100 text-slate-800 border border-slate-300'
+        };
     }
   };
 
@@ -88,6 +125,36 @@ export default function RoomsPage() {
         </div>
       </div>
 
+      {/* Room Status Color Options Legend */}
+      <div className="p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2">
+          <Sparkles className="text-blue-600" size={16} />
+          <span className="font-extrabold text-slate-800 text-xs">कोठा स्थिति रङ्ग सङ्केत (Room Color Options):</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold text-xs">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-300"></span>
+            🟢 Vacant / Available (खाली)
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-100 text-blue-900 border border-blue-300 font-bold text-xs">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-600 ring-2 ring-blue-300"></span>
+            🔵 Occupied (व्यस्त / पाहुना भएको)
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-100 text-purple-900 border border-purple-300 font-bold text-xs">
+            <span className="w-2.5 h-2.5 rounded-full bg-purple-600 ring-2 ring-purple-300"></span>
+            🟣 Reserved (आरक्षित)
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-amber-300"></span>
+            🟡 Cleaning Process (सरसफाइ प्रक्रिया)
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-100 text-rose-900 border border-rose-300 font-bold text-xs">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-600 ring-2 ring-rose-300"></span>
+            🔴 Maintenance (मर्मत)
+          </span>
+        </div>
+      </div>
+
       {/* Floor 2 */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
         <div className="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -112,7 +179,7 @@ export default function RoomsPage() {
                       <h3 className="text-2xl font-black text-slate-900">Room {r.number}</h3>
                       <p className="text-xs font-bold text-slate-600 mt-0.5">{r.type}</p>
                     </div>
-                    <span className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-white/90 shadow-2xs">
+                    <span className={`flex items-center gap-1.5 text-xs font-extrabold px-3 py-1 rounded-full ${badge.badgeBg} shadow-2xs`}>
                       <span className={`w-2 h-2 rounded-full ${badge.dot}`}></span>
                       {badge.label}
                     </span>
@@ -128,7 +195,7 @@ export default function RoomsPage() {
                       <span className="text-slate-400">/</span>
                       <strong className="text-slate-800 font-bold">रू. {r.dailyRate.toLocaleString()} NPR</strong>
                     </p>
-                    <p>Guest: <strong className="text-slate-800">{r.currentGuest || 'None'}</strong></p>
+                    <p>Guest: <strong className="text-slate-900 font-bold">{r.currentGuest || 'खाली (No Guest)'}</strong></p>
                     {r.maintenanceNote && (
                       <p className="text-rose-700 font-bold bg-rose-100/80 p-1.5 rounded-lg mt-1 text-[11px]">
                         Note: {r.maintenanceNote}
@@ -138,27 +205,50 @@ export default function RoomsPage() {
                 </div>
 
                 {/* Quick Status Control Buttons */}
-                <div className="pt-3 border-t border-black/5 grid grid-cols-3 gap-1.5 text-xs font-bold">
+                <div className="pt-3 border-t border-black/5 grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[11px] font-bold">
                   <button 
                     onClick={() => updateRoomStatus(r.number, 'AVAILABLE')}
-                    className="p-1.5 bg-white/80 hover:bg-white text-emerald-800 rounded-lg text-center transition border border-emerald-200"
-                    title="Mark Available"
+                    className={`py-1.5 px-2 rounded-lg text-center transition border ${
+                      r.status === 'AVAILABLE'
+                        ? 'bg-emerald-600 text-white border-emerald-600 font-black shadow-xs'
+                        : 'bg-white/90 hover:bg-emerald-50 text-emerald-800 border-emerald-300'
+                    }`}
+                    title="Mark Vacant / Available (खाली)"
                   >
-                    Available
+                    🟢 Vacant
+                  </button>
+                  <button 
+                    onClick={() => updateRoomStatus(r.number, 'OCCUPIED')}
+                    className={`py-1.5 px-2 rounded-lg text-center transition border ${
+                      r.status === 'OCCUPIED'
+                        ? 'bg-blue-600 text-white border-blue-600 font-black shadow-xs'
+                        : 'bg-white/90 hover:bg-blue-50 text-blue-800 border-blue-300'
+                    }`}
+                    title="Mark Occupied (व्यस्त)"
+                  >
+                    🔵 Occupied
                   </button>
                   <button 
                     onClick={() => updateRoomStatus(r.number, 'CLEANING_REQUIRED')}
-                    className="p-1.5 bg-white/80 hover:bg-white text-amber-800 rounded-lg text-center transition border border-amber-200"
-                    title="Request Clean"
+                    className={`py-1.5 px-2 rounded-lg text-center transition border ${
+                      r.status === 'CLEANING_REQUIRED'
+                        ? 'bg-amber-500 text-white border-amber-500 font-black shadow-xs'
+                        : 'bg-white/90 hover:bg-amber-50 text-amber-800 border-amber-300'
+                    }`}
+                    title="Cleaning Process (सरसफाइ प्रक्रिया)"
                   >
-                    Clean Req
+                    🟡 Clean Req
                   </button>
                   <button 
                     onClick={() => updateRoomStatus(r.number, 'UNDER_MAINTENANCE', 'Manual inspection request')}
-                    className="p-1.5 bg-white/80 hover:bg-white text-rose-800 rounded-lg text-center transition border border-rose-200"
-                    title="Under Maintenance"
+                    className={`py-1.5 px-2 rounded-lg text-center transition border ${
+                      r.status === 'UNDER_MAINTENANCE'
+                        ? 'bg-rose-600 text-white border-rose-600 font-black shadow-xs'
+                        : 'bg-white/90 hover:bg-rose-50 text-rose-800 border-rose-300'
+                    }`}
+                    title="Under Maintenance (मर्मत)"
                   >
-                    Mnt Block
+                    🔴 Mnt Block
                   </button>
                 </div>
               </div>
@@ -191,7 +281,7 @@ export default function RoomsPage() {
                       <h3 className="text-2xl font-black text-slate-900">Room {r.number}</h3>
                       <p className="text-xs font-bold text-slate-600 mt-0.5">{r.type}</p>
                     </div>
-                    <span className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-white/90 shadow-2xs">
+                    <span className={`flex items-center gap-1.5 text-xs font-extrabold px-3 py-1 rounded-full ${badge.badgeBg} shadow-2xs`}>
                       <span className={`w-2 h-2 rounded-full ${badge.dot}`}></span>
                       {badge.label}
                     </span>
@@ -207,7 +297,7 @@ export default function RoomsPage() {
                       <span className="text-slate-400">/</span>
                       <strong className="text-slate-800 font-bold">रू. {r.dailyRate.toLocaleString()} NPR</strong>
                     </p>
-                    <p>Guest: <strong className="text-slate-800">{r.currentGuest || 'None'}</strong></p>
+                    <p>Guest: <strong className="text-slate-900 font-bold">{r.currentGuest || 'खाली (No Guest)'}</strong></p>
                     {r.maintenanceNote && (
                       <p className="text-rose-700 font-bold bg-rose-100/80 p-1.5 rounded-lg mt-1 text-[11px]">
                         Note: {r.maintenanceNote}
@@ -217,24 +307,50 @@ export default function RoomsPage() {
                 </div>
 
                 {/* Quick Status Control Buttons */}
-                <div className="pt-3 border-t border-black/5 grid grid-cols-3 gap-1.5 text-xs font-bold">
+                <div className="pt-3 border-t border-black/5 grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[11px] font-bold">
                   <button 
                     onClick={() => updateRoomStatus(r.number, 'AVAILABLE')}
-                    className="p-1.5 bg-white/80 hover:bg-white text-emerald-800 rounded-lg text-center transition border border-emerald-200"
+                    className={`py-1.5 px-2 rounded-lg text-center transition border ${
+                      r.status === 'AVAILABLE'
+                        ? 'bg-emerald-600 text-white border-emerald-600 font-black shadow-xs'
+                        : 'bg-white/90 hover:bg-emerald-50 text-emerald-800 border-emerald-300'
+                    }`}
+                    title="Mark Vacant / Available (खाली)"
                   >
-                    Available
+                    🟢 Vacant
+                  </button>
+                  <button 
+                    onClick={() => updateRoomStatus(r.number, 'OCCUPIED')}
+                    className={`py-1.5 px-2 rounded-lg text-center transition border ${
+                      r.status === 'OCCUPIED'
+                        ? 'bg-blue-600 text-white border-blue-600 font-black shadow-xs'
+                        : 'bg-white/90 hover:bg-blue-50 text-blue-800 border-blue-300'
+                    }`}
+                    title="Mark Occupied (व्यस्त)"
+                  >
+                    🔵 Occupied
                   </button>
                   <button 
                     onClick={() => updateRoomStatus(r.number, 'CLEANING_REQUIRED')}
-                    className="p-1.5 bg-white/80 hover:bg-white text-amber-800 rounded-lg text-center transition border border-amber-200"
+                    className={`py-1.5 px-2 rounded-lg text-center transition border ${
+                      r.status === 'CLEANING_REQUIRED'
+                        ? 'bg-amber-500 text-white border-amber-500 font-black shadow-xs'
+                        : 'bg-white/90 hover:bg-amber-50 text-amber-800 border-amber-300'
+                    }`}
+                    title="Cleaning Process (सरसफाइ प्रक्रिया)"
                   >
-                    Clean Req
+                    🟡 Clean Req
                   </button>
                   <button 
                     onClick={() => updateRoomStatus(r.number, 'UNDER_MAINTENANCE', 'Manual inspection request')}
-                    className="p-1.5 bg-white/80 hover:bg-white text-rose-800 rounded-lg text-center transition border border-rose-200"
+                    className={`py-1.5 px-2 rounded-lg text-center transition border ${
+                      r.status === 'UNDER_MAINTENANCE'
+                        ? 'bg-rose-600 text-white border-rose-600 font-black shadow-xs'
+                        : 'bg-white/90 hover:bg-rose-50 text-rose-800 border-rose-300'
+                    }`}
+                    title="Under Maintenance (मर्मत)"
                   >
-                    Mnt Block
+                    🔴 Mnt Block
                   </button>
                 </div>
               </div>

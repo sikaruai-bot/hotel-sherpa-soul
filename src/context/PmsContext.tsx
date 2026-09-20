@@ -155,8 +155,8 @@ export interface Invoice {
   roomNumber: string;
   items: { description: string; quantity: number; unitPrice: number; total: number }[];
   subtotal: number;
-  taxAmount: number; // 13% VAT
-  serviceCharge: number; // 10% Service
+  taxAmount: number; // 0 for PAN-only hotel (VAT exempt / not registered)
+  serviceCharge: number; // 0 for PAN bill
   discount: number;
   grandTotal: number;
   paidAmount: number;
@@ -209,7 +209,7 @@ interface PmsContextType {
     checkOutDate: string,
     excludeReservationId?: string
   ) => RoomAvailabilityStatus;
-  addReservation: (reservation: Omit<Reservation, 'id' | 'createdAt'>) => { success: boolean; error?: string };
+  addReservation: (reservation: Omit<Reservation, 'id' | 'createdAt'>) => Promise<{ success: boolean; error?: string; reservation?: Reservation }>;
   checkInGuest: (reservationId: string, detailsOrPassport?: string | Partial<Reservation>) => void;
   checkOutGuest: (reservationId: string, paymentDetails?: { method: Invoice['paymentMethod']; amount: number }) => void;
   updateRoomStatus: (roomNumber: string, status: Room['status'], note?: string) => void;
@@ -243,77 +243,14 @@ interface PmsContextType {
 
 const initialRooms: Room[] = [
   { id: '1', number: '201', floor: 2, type: 'Deluxe Room', capacity: 2, bedType: 'King Bed', dailyRate: 2700, dailyRateUsd: 20, weeklyRate: 16200, monthlyRate: 50000, status: 'AVAILABLE', kitchenEligible: true, longStayEligible: true },
-  { id: '2', number: '202', floor: 2, type: 'Family Room', capacity: 4, bedType: 'Queen + Single Bed', dailyRate: 4050, dailyRateUsd: 30, weeklyRate: 24300, monthlyRate: 70000, status: 'OCCUPIED', kitchenEligible: true, longStayEligible: true, currentGuest: 'Sarah Connor', cleaningStaff: 'Pasang Lhamu' },
-  { id: '3', number: '203', floor: 2, type: 'Budget Family Room', capacity: 4, bedType: 'Twin Double Beds', dailyRate: 2700, dailyRateUsd: 20, weeklyRate: 16200, monthlyRate: 45000, status: 'LONG_STAY', kitchenEligible: true, longStayEligible: true, currentGuest: 'Carlos Gomez', cleaningStaff: 'Dawa Sherpa' },
-  { id: '4', number: '301', floor: 3, type: 'Deluxe Room', capacity: 2, bedType: 'King Bed', dailyRate: 2700, dailyRateUsd: 20, weeklyRate: 16200, monthlyRate: 50000, status: 'UNDER_MAINTENANCE', kitchenEligible: true, longStayEligible: true, maintenanceNote: 'Shower pressure calibration' },
-  { id: '5', number: '302', floor: 3, type: 'Family Room', capacity: 4, bedType: 'Queen + Single Bed', dailyRate: 4050, dailyRateUsd: 30, weeklyRate: 24300, monthlyRate: 70000, status: 'LONG_STAY', kitchenEligible: true, longStayEligible: true, currentGuest: 'Jane Smith', cleaningStaff: 'Dawa Sherpa' },
+  { id: '2', number: '202', floor: 2, type: 'Family Room', capacity: 4, bedType: 'Queen + Single Bed', dailyRate: 4050, dailyRateUsd: 30, weeklyRate: 24300, monthlyRate: 70000, status: 'AVAILABLE', kitchenEligible: true, longStayEligible: true },
+  { id: '3', number: '203', floor: 2, type: 'Budget Family Room', capacity: 4, bedType: 'Twin Double Beds', dailyRate: 2700, dailyRateUsd: 20, weeklyRate: 16200, monthlyRate: 45000, status: 'AVAILABLE', kitchenEligible: true, longStayEligible: true },
+  { id: '4', number: '301', floor: 3, type: 'Deluxe Room', capacity: 2, bedType: 'King Bed', dailyRate: 2700, dailyRateUsd: 20, weeklyRate: 16200, monthlyRate: 50000, status: 'AVAILABLE', kitchenEligible: true, longStayEligible: true },
+  { id: '5', number: '302', floor: 3, type: 'Family Room', capacity: 4, bedType: 'Queen + Single Bed', dailyRate: 4050, dailyRateUsd: 30, weeklyRate: 24300, monthlyRate: 70000, status: 'AVAILABLE', kitchenEligible: true, longStayEligible: true },
   { id: '6', number: '303', floor: 3, type: 'Budget Family Room', capacity: 4, bedType: 'Twin Double Beds', dailyRate: 2700, dailyRateUsd: 20, weeklyRate: 16200, monthlyRate: 45000, status: 'AVAILABLE', kitchenEligible: true, longStayEligible: true },
 ];
 
-const initialReservations: Reservation[] = [
-  {
-    id: 'RES-1001',
-    otaReference: 'BK-991204',
-    guestName: 'Sarah Connor',
-    email: 'sarah.connor@gmail.com',
-    phone: '+1 555 0192',
-    nationality: 'American',
-    passportNumber: 'USA8892104',
-    roomNumber: '202',
-    roomType: 'Standard Double',
-    checkInDate: new Date().toISOString().split('T')[0],
-    checkOutDate: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
-    adults: 2,
-    children: 0,
-    totalAmount: 10500,
-    paidAmount: 10500,
-    status: 'CHECKED_IN',
-    source: 'Booking.com',
-    specialRequests: 'Quiet room on upper side, extra towels',
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-  },
-  {
-    id: 'RES-1002',
-    otaReference: 'AG-77412',
-    guestName: 'Michael Chang',
-    email: 'm.chang@outlook.com',
-    phone: '+852 9123 4567',
-    nationality: 'Hong Kong',
-    passportNumber: 'HKG491028',
-    roomNumber: '201',
-    roomType: 'Standard Double',
-    checkInDate: new Date().toISOString().split('T')[0],
-    checkOutDate: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
-    adults: 1,
-    children: 0,
-    totalAmount: 7000,
-    paidAmount: 0,
-    status: 'CONFIRMED',
-    source: 'Agoda',
-    specialRequests: 'Late check-in around 6:00 PM',
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-  },
-  {
-    id: 'RES-1003',
-    guestName: 'Elena Rossi',
-    email: 'elena.rossi@yahoo.it',
-    phone: '+39 333 123456',
-    nationality: 'Italian',
-    passportNumber: 'ITA391029',
-    roomNumber: '303',
-    roomType: 'Family Suite',
-    checkInDate: new Date(Date.now() - 86400000 * 4).toISOString().split('T')[0],
-    checkOutDate: new Date().toISOString().split('T')[0],
-    adults: 2,
-    children: 1,
-    totalAmount: 26000,
-    paidAmount: 26000,
-    status: 'CONFIRMED',
-    source: 'Direct Website',
-    specialRequests: 'Airport pickup arranged',
-    createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-  },
-];
+const initialReservations: Reservation[] = [];
 
 const initialContracts: LongStayContract[] = [
   {
@@ -443,57 +380,149 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const refreshFromBackend = async () => {
     try {
+      const ts = Date.now();
       const [roomsRes, resRes, contRes, kitchRes, hkRes, mtRes, invRes, notifRes] = await Promise.allSettled([
-        fetch('/api/rooms').then(r => r.json()),
-        fetch('/api/reservations').then(r => r.json()),
-        fetch('/api/long-stay').then(r => r.json()),
-        fetch('/api/kitchen').then(r => r.json()),
-        fetch('/api/housekeeping').then(r => r.json()),
-        fetch('/api/maintenance').then(r => r.json()),
-        fetch('/api/billing').then(r => r.json()),
-        fetch('/api/notifications').then(r => r.json()),
+        fetch(`/api/rooms?_t=${ts}`, { cache: 'no-store' }).then(r => r.json()),
+        fetch(`/api/reservations?_t=${ts}`, { cache: 'no-store' }).then(r => r.json()),
+        fetch(`/api/long-stay?_t=${ts}`, { cache: 'no-store' }).then(r => r.json()),
+        fetch(`/api/kitchen?_t=${ts}`, { cache: 'no-store' }).then(r => r.json()),
+        fetch(`/api/housekeeping?_t=${ts}`, { cache: 'no-store' }).then(r => r.json()),
+        fetch(`/api/maintenance?_t=${ts}`, { cache: 'no-store' }).then(r => r.json()),
+        fetch(`/api/billing?_t=${ts}`, { cache: 'no-store' }).then(r => r.json()),
+        fetch(`/api/notifications?_t=${ts}`, { cache: 'no-store' }).then(r => r.json()),
       ]);
 
       let anySuccess = false;
+      let latestRooms = rooms;
+      let latestReservations = reservations;
+      let latestContracts = contracts;
+      let latestKitchenUsers = kitchenUsers;
+      let latestIncidents = kitchenIncidents;
+      let latestTasks = housekeepingTasks;
+      let latestTickets = maintenanceTickets;
+      let latestInvoices = invoices;
+      let latestNotifs = notifications;
 
       if (roomsRes.status === 'fulfilled' && roomsRes.value?.success && Array.isArray(roomsRes.value.data) && roomsRes.value.data.length > 0) {
-        setRooms(roomsRes.value.data);
+        latestRooms = roomsRes.value.data;
         anySuccess = true;
       }
-      if (resRes.status === 'fulfilled' && resRes.value?.success && Array.isArray(resRes.value.data) && resRes.value.data.length > 0) {
-        setReservations(resRes.value.data);
+
+      if (resRes.status === 'fulfilled' && resRes.value?.success && Array.isArray(resRes.value.data)) {
+        const backendReservations: Reservation[] = resRes.value.data;
+        const backendIds = new Set(backendReservations.map(r => r.id));
+
+        // Preserve any unsynced local reservations so they never disappear after 10-15 seconds
+        let mergedReservations = [...backendReservations];
+        setReservations(prev => {
+          const unsynced = prev.filter(r => !backendIds.has(r.id));
+          if (unsynced.length > 0) {
+            mergedReservations = [...unsynced, ...backendReservations];
+            // Background push unsynced reservations to PostgreSQL
+            unsynced.forEach(localRes => {
+              fetch('/api/reservations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(localRes),
+              }).catch(e => console.warn('Background sync failed for', localRes.id, e));
+            });
+          }
+          return mergedReservations;
+        });
+
+        latestReservations = mergedReservations;
         anySuccess = true;
+
+        // Auto-synchronize room statuses with active reservations for today (Nepal Time UTC + 5:45)
+        const now = new Date();
+        const nepalOffsetMs = (5 * 60 + 45) * 60 * 1000;
+        const nepalNow = new Date(now.getTime() + nepalOffsetMs);
+        const todayStr = `${nepalNow.getUTCFullYear()}-${String(nepalNow.getUTCMonth() + 1).padStart(2, '0')}-${String(nepalNow.getUTCDate()).padStart(2, '0')}`;
+
+        const activeResToday = latestReservations.filter(
+          r => (r.status === 'CONFIRMED' || r.status === 'CHECKED_IN') && r.checkInDate <= todayStr && r.checkOutDate >= todayStr
+        );
+
+        latestRooms = latestRooms.map(room => {
+          const matchingRes = activeResToday.find(r => r.roomNumber === room.number);
+          if (matchingRes) {
+            return {
+              ...room,
+              status: matchingRes.status === 'CHECKED_IN' ? ('OCCUPIED' as const) : ('RESERVED' as const),
+              currentGuest: matchingRes.guestName,
+            };
+          }
+          // If no active reservation today, only reset if it was marked RESERVED
+          if (room.status === 'RESERVED') {
+            return {
+              ...room,
+              status: 'AVAILABLE' as const,
+              currentGuest: undefined,
+            };
+          }
+          return room;
+        });
+
+        setRooms(latestRooms);
+      } else if (roomsRes.status === 'fulfilled' && roomsRes.value?.success) {
+        setRooms(latestRooms);
       }
-      if (contRes.status === 'fulfilled' && contRes.value?.success && Array.isArray(contRes.value.data) && contRes.value.data.length > 0) {
-        setContracts(contRes.value.data);
+
+      if (contRes.status === 'fulfilled' && contRes.value?.success && Array.isArray(contRes.value.data)) {
+        latestContracts = contRes.value.data;
+        setContracts(latestContracts);
         anySuccess = true;
       }
       if (kitchRes.status === 'fulfilled' && kitchRes.value?.success && kitchRes.value.data) {
-        if (Array.isArray(kitchRes.value.data.users) && kitchRes.value.data.users.length > 0) {
-          setKitchenUsers(kitchRes.value.data.users);
+        if (Array.isArray(kitchRes.value.data.users)) {
+          latestKitchenUsers = kitchRes.value.data.users;
+          setKitchenUsers(latestKitchenUsers);
           anySuccess = true;
         }
-        if (Array.isArray(kitchRes.value.data.incidents) && kitchRes.value.data.incidents.length > 0) {
-          setKitchenIncidents(kitchRes.value.data.incidents);
+        if (Array.isArray(kitchRes.value.data.incidents)) {
+          latestIncidents = kitchRes.value.data.incidents;
+          setKitchenIncidents(latestIncidents);
         }
       }
-      if (hkRes.status === 'fulfilled' && hkRes.value?.success && Array.isArray(hkRes.value.data) && hkRes.value.data.length > 0) {
-        setHousekeepingTasks(hkRes.value.data);
+      if (hkRes.status === 'fulfilled' && hkRes.value?.success && Array.isArray(hkRes.value.data)) {
+        latestTasks = hkRes.value.data;
+        setHousekeepingTasks(latestTasks);
         anySuccess = true;
       }
-      if (mtRes.status === 'fulfilled' && mtRes.value?.success && Array.isArray(mtRes.value.data) && mtRes.value.data.length > 0) {
-        setMaintenanceTickets(mtRes.value.data);
+      if (mtRes.status === 'fulfilled' && mtRes.value?.success && Array.isArray(mtRes.value.data)) {
+        latestTickets = mtRes.value.data;
+        setMaintenanceTickets(latestTickets);
         anySuccess = true;
       }
-      if (invRes.status === 'fulfilled' && invRes.value?.success && Array.isArray(invRes.value.data) && invRes.value.data.length > 0) {
-        setInvoices(invRes.value.data);
+      if (invRes.status === 'fulfilled' && invRes.value?.success && Array.isArray(invRes.value.data)) {
+        latestInvoices = invRes.value.data;
+        setInvoices(latestInvoices);
         anySuccess = true;
       }
-      if (notifRes.status === 'fulfilled' && notifRes.value?.success && Array.isArray(notifRes.value.data) && notifRes.value.data.length > 0) {
-        setNotifications(notifRes.value.data);
+      if (notifRes.status === 'fulfilled' && notifRes.value?.success && Array.isArray(notifRes.value.data)) {
+        latestNotifs = notifRes.value.data;
+        setNotifications(latestNotifs);
       }
 
       setIsBackendConnected(anySuccess);
+
+      // CRITICAL FIX: Synchronize localStorage with confirmed backend data
+      // This permanently eliminates ghost/stale localStorage conflicts on hard refresh
+      if (anySuccess) {
+        persist({
+          rooms: latestRooms,
+          reservations: latestReservations,
+          contracts: latestContracts,
+          kitchenUsers: latestKitchenUsers,
+          kitchenIncidents: latestIncidents,
+          gasLevel,
+          housekeepingTasks: latestTasks,
+          maintenanceTickets: latestTickets,
+          invoices: latestInvoices,
+          notifications: latestNotifs,
+          stopSellActive,
+        });
+      }
     } catch (e) {
       console.warn('Backend sync error:', e);
       setIsBackendConnected(false);
@@ -718,7 +747,9 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
-  const addReservation = (res: Omit<Reservation, 'id' | 'createdAt'>): { success: boolean; error?: string } => {
+  const addReservation = async (
+    res: Omit<Reservation, 'id' | 'createdAt'>
+  ): Promise<{ success: boolean; error?: string; reservation?: Reservation }> => {
     // 1. Double-Booking Shield Check
     const availability = checkRoomAvailability(res.roomNumber, res.checkInDate, res.checkOutDate);
     if (!availability.isAvailable) {
@@ -732,63 +763,117 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     }
 
-    const newId = `RES-${Math.floor(1000 + Math.random() * 9000)}`;
-    const newReservation: Reservation = {
-      ...res,
-      id: newId,
-      createdAt: new Date().toISOString(),
-    };
-    const updatedReservations = [newReservation, ...reservations];
-    setReservations(updatedReservations);
+    try {
+      // 2. Direct ACID commit to PostgreSQL Backend API
+      const response = await fetch('/api/reservations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(res),
+      });
 
-    // Update Room status to RESERVED or OCCUPIED
-    const updatedRooms = rooms.map(r => {
-      if (r.number === res.roomNumber) {
+      const json = await response.json();
+
+      if (!response.ok || !json.success) {
+        console.error('API reservation creation failed:', json.error);
         return {
-          ...r,
-          status: res.status === 'CHECKED_IN' ? ('OCCUPIED' as const) : ('RESERVED' as const),
-          currentGuest: res.guestName,
+          success: false,
+          error: json.error || 'सर्भरमा बुकिङ सुरक्षित हुन सकेन (Failed to save reservation to database)',
         };
       }
-      return r;
-    });
-    setRooms(updatedRooms);
 
-    // Add Notification
-    const newNotif: NotificationItem = {
-      id: `NOTIF-${Date.now()}`,
-      title: `New Reservation: ${res.guestName}`,
-      detail: `Room ${res.roomNumber} (${res.roomType}) reserved from ${res.checkInDate} to ${res.checkOutDate} via ${res.source}. (Shield verified: No double-booking conflict).`,
-      timestamp: 'Just now',
-      type: 'Booking',
-      channel: 'WhatsApp',
-      status: 'Delivered',
-    };
-    const updatedNotifs = [newNotif, ...notifications];
-    setNotifications(updatedNotifs);
+      const createdReservation: Reservation = json.data;
 
-    persist({
-      rooms: updatedRooms,
-      reservations: updatedReservations,
-      contracts,
-      kitchenUsers,
-      kitchenIncidents,
-      gasLevel,
-      housekeepingTasks,
-      maintenanceTickets,
-      invoices,
-      notifications: updatedNotifs,
-      stopSellActive,
-    });
+      // 3. Update React State with the confirmed Database record
+      const updatedReservations = [createdReservation, ...reservations.filter(r => r.id !== createdReservation.id)];
+      setReservations(updatedReservations);
 
-    // Background sync to API
-    fetch('/api/reservations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(res),
-    }).catch(err => console.warn('Sync reservation error:', err));
+      // 4. Update Room status to RESERVED or OCCUPIED (only if reservation covers today)
+      const nowTime = new Date();
+      const nepalOffsetMsTime = (5 * 60 + 45) * 60 * 1000;
+      const nepalNowTime = new Date(nowTime.getTime() + nepalOffsetMsTime);
+      const todayStrVal = `${nepalNowTime.getUTCFullYear()}-${String(nepalNowTime.getUTCMonth() + 1).padStart(2, '0')}-${String(nepalNowTime.getUTCDate()).padStart(2, '0')}`;
+      const isForToday = res.checkInDate <= todayStrVal && res.checkOutDate >= todayStrVal;
 
-    return { success: true };
+      const updatedRooms = rooms.map(r => {
+        if (r.number === res.roomNumber && isForToday) {
+          return {
+            ...r,
+            status: createdReservation.status === 'CHECKED_IN' ? ('OCCUPIED' as const) : ('RESERVED' as const),
+            currentGuest: res.guestName,
+          };
+        }
+        return r;
+      });
+      setRooms(updatedRooms);
+
+      // 5. Add Notification
+      const newNotif: NotificationItem = {
+        id: `NOTIF-${Date.now()}`,
+        title: `New Reservation: ${res.guestName}`,
+        detail: `Room ${res.roomNumber} (${res.roomType}) reserved from ${res.checkInDate} to ${res.checkOutDate} via ${res.source}. (Shield verified & permanently committed to database).`,
+        timestamp: 'Just now',
+        type: 'Booking',
+        channel: 'WhatsApp',
+        status: 'Delivered',
+      };
+      const updatedNotifs = [newNotif, ...notifications];
+      setNotifications(updatedNotifs);
+
+      persist({
+        rooms: updatedRooms,
+        reservations: updatedReservations,
+        contracts,
+        kitchenUsers,
+        kitchenIncidents,
+        gasLevel,
+        housekeepingTasks,
+        maintenanceTickets,
+        invoices,
+        notifications: updatedNotifs,
+        stopSellActive,
+      });
+
+      return { success: true, reservation: createdReservation };
+    } catch (err: any) {
+      console.warn('Network error during reservation sync, falling back to local storage:', err);
+      // Offline fallback
+      const fallbackId = `RES-${Math.floor(1000 + Math.random() * 9000)}`;
+      const fallbackReservation: Reservation = {
+        ...res,
+        id: fallbackId,
+        createdAt: new Date().toISOString(),
+      };
+      const updatedReservations = [fallbackReservation, ...reservations];
+      setReservations(updatedReservations);
+
+      const updatedRooms = rooms.map(r => {
+        if (r.number === res.roomNumber) {
+          return {
+            ...r,
+            status: res.status === 'CHECKED_IN' ? ('OCCUPIED' as const) : ('RESERVED' as const),
+            currentGuest: res.guestName,
+          };
+        }
+        return r;
+      });
+      setRooms(updatedRooms);
+
+      persist({
+        rooms: updatedRooms,
+        reservations: updatedReservations,
+        contracts,
+        kitchenUsers,
+        kitchenIncidents,
+        gasLevel,
+        housekeepingTasks,
+        maintenanceTickets,
+        invoices,
+        notifications,
+        stopSellActive,
+      });
+
+      return { success: true, reservation: fallbackReservation };
+    }
   };
 
   const checkInGuest = (reservationId: string, detailsOrPassport?: string | Partial<Reservation>) => {
@@ -968,7 +1053,11 @@ export const PmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     fetch(`/api/rooms/${roomNumber}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, maintenanceNote: note }),
+      body: JSON.stringify({ 
+        status, 
+        maintenanceNote: note,
+        currentGuest: status === 'AVAILABLE' ? null : undefined
+      }),
     }).catch(err => console.warn('Sync room status error:', err));
   };
 

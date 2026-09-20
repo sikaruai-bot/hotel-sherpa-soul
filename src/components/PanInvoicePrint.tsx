@@ -184,10 +184,13 @@ export default function PanInvoicePrint({ invoice, onClose }: PanInvoicePrintPro
           </div>
 
           {/* 2. Bill Title */}
-          <div className="text-center my-4">
+          <div className="text-center my-3">
             <h2 className="text-base font-black tracking-wider uppercase inline-block border-b-2 border-slate-900 pb-0.5">
               PAN BILL / बिजक
             </h2>
+            <p className="text-[11px] text-slate-600 mt-0.5 font-semibold">
+              (स्थायी लेखा नम्बर दर्ता • भ्याट दर्ता नभएको / केवल प्यान बिजक • Non-VAT PAN Registered Bill)
+            </p>
           </div>
 
           {/* 3. Invoice Meta & Guest / Buyer Information */}
@@ -298,9 +301,10 @@ export default function PanInvoicePrint({ invoice, onClose }: PanInvoicePrintPro
               </div>
 
               <div className="text-[11px] text-slate-500 space-y-0.5 pt-1">
+                <p>• स्थायी लेखा नम्बर (PAN) मा मात्र दर्ता रहेकोले नियमानुसार भ्याट (VAT) नजोडिएको प्यान बिजक।</p>
                 <p>• Goods & services once provided are non-refundable.</p>
                 <p>• Standard Check-out time is 12:00 PM.</p>
-                <p>• This is a computer system generated bill.</p>
+                <p>• This is an official computer system generated PAN bill.</p>
               </div>
             </div>
 
@@ -317,6 +321,11 @@ export default function PanInvoicePrint({ invoice, onClose }: PanInvoicePrintPro
                   <span>- NPR {invoice.discount.toLocaleString()}</span>
                 </div>
               )}
+
+              <div className="flex justify-between text-[11px] text-slate-500 font-sans">
+                <span>VAT / कर (१३%):</span>
+                <span className="font-mono font-medium text-slate-600">NPR 0 (PAN दर्ता / Non-VAT)</span>
+              </div>
 
               <div className="flex justify-between text-sm font-black text-slate-950 pt-2 border-t-2 border-slate-800">
                 <span className="font-sans">Grand Total (कुल जम्मा):</span>

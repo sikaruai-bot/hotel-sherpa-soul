@@ -21,8 +21,8 @@ export default function AutomationSettingsPage() {
 
   const [settings, setSettings] = useState({
     businessTimezone: 'Asia/Kathmandu',
-    vatRate: 13,
-    serviceChargeRate: 10,
+    vatRate: 0,
+    serviceChargeRate: 0,
     holdDurationMinutes: 15,
     autoReleaseNoShowHour: 18,
     maxJobRetries: 5,
@@ -179,6 +179,15 @@ export default function AutomationSettingsPage() {
           </h2>
 
           <div className="space-y-3 text-xs">
+            <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl text-emerald-950 space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-emerald-900">
+                <span>✓ Tax Status: PAN Registered Only (Non-VAT)</span>
+              </div>
+              <p className="text-[11px] text-emerald-800 leading-relaxed">
+                होटल स्थायी लेखा नम्बर (PAN: <strong>119205419</strong>) मा दर्ता छ। भ्याट (VAT) दर्ता नभएको कारणले सबै बिजकहरू आधिकारिक <strong>PAN Bill (बिजक)</strong> का रूपमा जारी हुन्छन् र VAT ०% लाग्दछ।
+              </p>
+            </div>
+
             <div>
               <label className="font-bold text-slate-700 block mb-1">Nepal VAT Rate (%)</label>
               <input
@@ -187,7 +196,7 @@ export default function AutomationSettingsPage() {
                 onChange={(e) => setSettings({ ...settings, vatRate: Number(e.target.value) })}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
               />
-              <span className="text-[11px] text-slate-400">Default 13% Value Added Tax (VAT)</span>
+              <span className="text-[11px] text-slate-400">Default 0% (Hotel is not VAT registered - PAN Bills only)</span>
             </div>
 
             <div>
@@ -198,7 +207,7 @@ export default function AutomationSettingsPage() {
                 onChange={(e) => setSettings({ ...settings, serviceChargeRate: Number(e.target.value) })}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
               />
-              <span className="text-[11px] text-slate-400">Hotel standard 10% Service Charge</span>
+              <span className="text-[11px] text-slate-400">Default 0% (No extra service charge added to bills)</span>
             </div>
 
             <div>

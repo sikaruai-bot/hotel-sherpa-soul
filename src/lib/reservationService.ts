@@ -285,7 +285,13 @@ export async function createUnifiedReservation(
 
         await commitRoomInventory(targetRoom.id, res.id, start, end, invStatus, tx);
 
-      // 6f. Update Room master status if instant checkin or reserved
+      // 6f. Update Room master status if instant checkin or reserved for today
+      const nowTime = new Date();
+      const nepalOffsetMs = (5 * 60 + 45) * 60 * 1000;
+      const nepalNow = new Date(nowTime.getTime() + nepalOffsetMs);
+      const nepalTodayDate = new Date(Date.UTC(nepalNow.getUTCFullYear(), nepalNow.getUTCMonth(), nepalNow.getUTCDate(), 0, 0, 0));
+      const arrivesToday = start.getTime() <= nepalTodayDate.getTime() && end.getTime() > nepalTodayDate.getTime();
+
       if (input.isInstantCheckIn) {
         await tx.room.update({
           where: { id: targetRoom.id },
@@ -294,7 +300,7 @@ export async function createUnifiedReservation(
             currentGuest: guest.name,
           },
         });
-      } else if (targetRoom.status === RoomStatus.AVAILABLE) {
+      } else if (arrivesToday && targetRoom.status === RoomStatus.AVAILABLE) {
         await tx.room.update({
           where: { id: targetRoom.id },
           data: {

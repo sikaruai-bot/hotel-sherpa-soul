@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { BookingSource, ReservationStatus, RoomStatus } from '@prisma/client';
 import { emitPmsEvent } from '@/lib/events';
-import { autoReleaseExpiredNoShows } from '@/lib/autoReleaseNoShows';
 import { checkCategoryCapacity, getAvailableAlternatives, dispatchRoomFullAlert } from '@/lib/roomCategoryShield';
 import { sendBookingNotificationToOfficialMail, sendBookingConfirmationToGuest } from '@/lib/emailService';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // Map UI sources to Prisma enum values
 const sourceMap: Record<string, BookingSource> = {
@@ -40,13 +42,6 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const statusParam = searchParams.get('status');
-
-    // Auto-release expired un-checked-in bookings so rooms immediately become AVAILABLE (खाली)
-    try {
-      await autoReleaseExpiredNoShows();
-    } catch (sweepErr) {
-      console.warn('Auto-release expired no-shows background check failed:', sweepErr);
-    }
 
     const reservations = await prisma.reservation.findMany({
       where: {

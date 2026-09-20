@@ -132,20 +132,55 @@ export async function checkRoomAvailability(
     };
   }
 
-  // 5. Check RoomInventory table for maintenance or out of order
-  const invConflicts = await db.roomInventory.findMany({
+  // 5. Check RoomInventory table for maintenance, out of order, or active booking locks
+  const invRows = await db.roomInventory.findMany({
     where: {
       roomId,
       date: { gte: start, lt: end },
       status: { in: [RoomInventoryStatus.MAINTENANCE, RoomInventoryStatus.OUT_OF_ORDER, RoomInventoryStatus.BOOKED, RoomInventoryStatus.OCCUPIED] },
       reservationId: excludeReservationId ? { not: excludeReservationId } : undefined,
     },
+    include: {
+      reservation: true,
+    },
   });
 
-  if (invConflicts.length > 0) {
+  const activeConflicts: typeof invRows = [];
+  for (const inv of invRows) {
+    if (inv.status === RoomInventoryStatus.MAINTENANCE || inv.status === RoomInventoryStatus.OUT_OF_ORDER) {
+      activeConflicts.push(inv);
+    } else if (inv.reservationId && inv.reservation) {
+      // Only block if reservation is genuinely active
+      if (['CONFIRMED', 'CHECKED_IN', 'HOLD', 'PENDING'].includes(inv.reservation.status)) {
+        activeConflicts.push(inv);
+      } else {
+        // Stale inventory lock from a NO_SHOW, CANCELLED, or historical booking: auto-heal
+        await db.roomInventory.update({
+          where: { id: inv.id },
+          data: {
+            status: RoomInventoryStatus.AVAILABLE,
+            reservationId: null,
+            heldExpiresAt: null,
+          },
+        }).catch(() => {});
+      }
+    } else if (inv.status === RoomInventoryStatus.BOOKED || inv.status === RoomInventoryStatus.OCCUPIED) {
+      // Stale orphaned row with no valid reservation
+      await db.roomInventory.update({
+        where: { id: inv.id },
+        data: {
+          status: RoomInventoryStatus.AVAILABLE,
+          reservationId: null,
+          heldExpiresAt: null,
+        },
+      }).catch(() => {});
+    }
+  }
+
+  if (activeConflicts.length > 0) {
     return {
       isAvailable: false,
-      conflictReason: `Room ${room.roomNumber} is unavailable on one or more dates due to ${invConflicts[0].status}.`,
+      conflictReason: `Room ${room.roomNumber} is unavailable on one or more dates due to ${activeConflicts[0].status}.`,
       room,
     };
   }

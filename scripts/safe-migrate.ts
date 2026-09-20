@@ -324,8 +324,8 @@ async function migrate() {
       CREATE TABLE IF NOT EXISTS "SystemConfig" (
         "id" TEXT NOT NULL PRIMARY KEY DEFAULT 'default',
         "businessTimezone" TEXT NOT NULL DEFAULT 'Asia/Kathmandu',
-        "vatRate" DOUBLE PRECISION NOT NULL DEFAULT 0.13,
-        "serviceChargeRate" DOUBLE PRECISION NOT NULL DEFAULT 0.10,
+        "vatRate" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+        "serviceChargeRate" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
         "autoReleaseNoShowHour" INTEGER NOT NULL DEFAULT 18,
         "holdDurationMinutes" INTEGER NOT NULL DEFAULT 15,
         "maxJobRetries" INTEGER NOT NULL DEFAULT 5,

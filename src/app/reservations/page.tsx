@@ -1370,7 +1370,7 @@ export default function ReservationsPage() {
                 <BedDouble size={24} />
               </div>
               <p className="text-xs text-slate-600 leading-relaxed">
-                To create a new reservation with instant room allocation and Nepal VAT Pan receipt, you can use the Front Desk Check-in Engine.
+                To create a new reservation with instant room allocation and official Nepal PAN Bill / Receipt (प्यान बिजक), you can use the Front Desk Check-in Engine.
               </p>
               <div className="pt-2 flex gap-2">
                 <a

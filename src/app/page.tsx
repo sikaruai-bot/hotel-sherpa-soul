@@ -32,7 +32,8 @@ export default function Dashboard() {
     stopSellActive,
     checkInGuest,
     checkOutGuest,
-    toggleStopSell
+    toggleStopSell,
+    updateRoomStatus
   } = usePms();
 
   const todayStr = new Date().toISOString().split('T')[0];
@@ -241,55 +242,170 @@ export default function Dashboard() {
               </Link>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {/* Room Status Color Options Legend */}
+            <div className="flex flex-wrap items-center gap-1.5 mb-4 p-2.5 bg-slate-50/90 rounded-xl border border-slate-200/90 text-xs font-bold">
+              <span className="text-slate-500 uppercase tracking-wider text-[10px] mr-1">कोठा स्थिति रङ्ग सङ्केत (Color Options):</span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100/90 text-emerald-800 border border-emerald-300 text-[11px]">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                🟢 Vacant / Available (खाली)
+              </span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-100/90 text-blue-800 border border-blue-300 text-[11px]">
+                <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                🔵 Occupied (व्यस्त / पाहुना भएको)
+              </span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-100/90 text-purple-800 border border-purple-300 text-[11px]">
+                <span className="w-2 h-2 rounded-full bg-purple-600"></span>
+                🟣 Reserved (आरक्षित)
+              </span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-100/90 text-amber-800 border border-amber-300 text-[11px]">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                🟡 Cleaning Process (सरसफाइ)
+              </span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-100/90 text-rose-800 border border-rose-300 text-[11px]">
+                <span className="w-2 h-2 rounded-full bg-rose-600"></span>
+                🔴 Maintenance (मर्मत)
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
               {rooms.map((r) => {
                 const getStatusBadge = () => {
                   switch (r.status) {
                     case 'AVAILABLE':
-                      return { bg: 'bg-emerald-50 border-emerald-200 text-emerald-800', label: 'Available', dot: 'bg-emerald-500' };
+                      return { 
+                        bg: 'bg-emerald-50/90 border-emerald-300 text-emerald-950', 
+                        label: 'Vacant (खाली)', 
+                        dot: 'bg-emerald-500 ring-2 ring-emerald-300',
+                        badgeBg: 'bg-emerald-100/90 text-emerald-900 border border-emerald-300'
+                      };
                     case 'OCCUPIED':
-                      return { bg: 'bg-blue-50 border-blue-200 text-blue-800', label: 'Occupied', dot: 'bg-blue-500' };
-                    case 'LONG_STAY':
-                      return { bg: 'bg-purple-50 border-purple-200 text-purple-800', label: 'Long Stay', dot: 'bg-purple-500' };
+                      return { 
+                        bg: 'bg-blue-50/90 border-blue-300 text-blue-950', 
+                        label: 'Occupied (व्यस्त)', 
+                        dot: 'bg-blue-600 ring-2 ring-blue-300',
+                        badgeBg: 'bg-blue-100/90 text-blue-900 border border-blue-300'
+                      };
+                    case 'RESERVED':
+                      return { 
+                        bg: 'bg-purple-50/90 border-purple-300 text-purple-950', 
+                        label: 'Reserved (आरक्षित)', 
+                        dot: 'bg-purple-600 ring-2 ring-purple-300',
+                        badgeBg: 'bg-purple-100/90 text-purple-900 border border-purple-300'
+                      };
                     case 'CLEANING_REQUIRED':
-                      return { bg: 'bg-amber-50 border-amber-200 text-amber-800', label: 'Cleaning', dot: 'bg-amber-500' };
+                      return { 
+                        bg: 'bg-amber-50/90 border-amber-300 text-amber-950', 
+                        label: 'Cleaning (सरसफाइ)', 
+                        dot: 'bg-amber-500 ring-2 ring-amber-300',
+                        badgeBg: 'bg-amber-100/90 text-amber-900 border border-amber-300'
+                      };
+                    case 'LONG_STAY':
+                      return { 
+                        bg: 'bg-indigo-50/90 border-indigo-300 text-indigo-950', 
+                        label: 'Long Stay (दीर्घकालीन)', 
+                        dot: 'bg-indigo-600 ring-2 ring-indigo-300',
+                        badgeBg: 'bg-indigo-100/90 text-indigo-900 border border-indigo-300'
+                      };
                     case 'UNDER_MAINTENANCE':
-                      return { bg: 'bg-rose-50 border-rose-200 text-rose-800', label: 'Maintenance', dot: 'bg-rose-500' };
+                      return { 
+                        bg: 'bg-rose-50/90 border-rose-300 text-rose-950', 
+                        label: 'Maintenance (मर्मत)', 
+                        dot: 'bg-rose-600 ring-2 ring-rose-300',
+                        badgeBg: 'bg-rose-100/90 text-rose-900 border border-rose-300'
+                      };
                     default:
-                      return { bg: 'bg-slate-50 border-slate-200 text-slate-800', label: r.status, dot: 'bg-slate-500' };
+                      return { 
+                        bg: 'bg-slate-50 border-slate-300 text-slate-800', 
+                        label: r.status, 
+                        dot: 'bg-slate-500',
+                        badgeBg: 'bg-slate-100 text-slate-800 border border-slate-300'
+                      };
                   }
                 };
 
                 const badge = getStatusBadge();
 
                 return (
-                  <Link 
-                    href="/reservations" 
+                  <div 
                     key={r.id} 
-                    className={`p-4 rounded-xl border ${badge.bg} transition-all hover:scale-[1.02] hover:shadow-md block cursor-pointer group`}
+                    className={`p-4 rounded-xl border ${badge.bg} transition-all hover:shadow-md block group`}
                   >
                     <div className="flex justify-between items-start">
-                      <span className="text-xl font-black text-slate-900 group-hover:text-blue-600 transition-colors">
+                      <span className="text-xl font-black text-slate-900">
                         Room {r.number}
                       </span>
-                      <span className="flex items-center gap-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full bg-white/80 shadow-2xs">
+                      <span className={`flex items-center gap-1.5 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full ${badge.badgeBg} shadow-2xs`}>
                         <span className={`w-2 h-2 rounded-full ${badge.dot}`}></span>
                         {badge.label}
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 mt-1 font-medium">{r.type} • Floor {r.floor}</p>
                     <div className="mt-3 pt-2.5 border-t border-black/5 flex justify-between items-center text-xs">
-                      <span className="text-slate-500 truncate max-w-[100px]">
-                        {r.currentGuest || 'No Guest'}
+                      <span className="text-slate-700 font-bold truncate max-w-[120px]">
+                        {r.currentGuest || 'खाली (No Guest)'}
                       </span>
-                      <span className="font-bold text-slate-900 text-[11px]">
+                      <span className="font-extrabold text-slate-900 text-[11px]">
                         ${r.dailyRateUsd || (r.dailyRate === 4050 ? 30 : 20)} USD <span className="text-slate-400">/</span> रु. {r.dailyRate.toLocaleString()}
                       </span>
                     </div>
-                    <div className="mt-2 text-[10px] text-blue-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 justify-end">
-                      <span>View in Calendar</span> &rarr;
+
+                    {/* Quick Status Control Buttons */}
+                    <div className="mt-3 pt-2 border-t border-black/5 flex items-center justify-between gap-1 text-[10px] font-bold">
+                      <button
+                        onClick={() => updateRoomStatus(r.number, 'AVAILABLE')}
+                        className={`px-1.5 py-1 rounded-md transition border text-center flex-1 ${
+                          r.status === 'AVAILABLE'
+                            ? 'bg-emerald-600 text-white border-emerald-600 font-extrabold shadow-xs'
+                            : 'bg-white/80 hover:bg-emerald-50 text-emerald-800 border-emerald-200'
+                        }`}
+                        title="Mark Vacant / Available (खाली)"
+                      >
+                        🟢 Vacant
+                      </button>
+                      <button
+                        onClick={() => updateRoomStatus(r.number, 'OCCUPIED')}
+                        className={`px-1.5 py-1 rounded-md transition border text-center flex-1 ${
+                          r.status === 'OCCUPIED'
+                            ? 'bg-blue-600 text-white border-blue-600 font-extrabold shadow-xs'
+                            : 'bg-white/80 hover:bg-blue-50 text-blue-800 border-blue-200'
+                        }`}
+                        title="Mark Occupied (व्यस्त)"
+                      >
+                        🔵 Occupied
+                      </button>
+                      <button
+                        onClick={() => updateRoomStatus(r.number, 'CLEANING_REQUIRED')}
+                        className={`px-1.5 py-1 rounded-md transition border text-center flex-1 ${
+                          r.status === 'CLEANING_REQUIRED'
+                            ? 'bg-amber-500 text-white border-amber-500 font-extrabold shadow-xs'
+                            : 'bg-white/80 hover:bg-amber-50 text-amber-800 border-amber-200'
+                        }`}
+                        title="Mark Cleaning Process (सरसफाइ)"
+                      >
+                        🟡 Clean
+                      </button>
+                      <button
+                        onClick={() => updateRoomStatus(r.number, 'UNDER_MAINTENANCE', 'Manual Inspection')}
+                        className={`px-1.5 py-1 rounded-md transition border text-center flex-1 ${
+                          r.status === 'UNDER_MAINTENANCE'
+                            ? 'bg-rose-600 text-white border-rose-600 font-extrabold shadow-xs'
+                            : 'bg-white/80 hover:bg-rose-50 text-rose-800 border-rose-200'
+                        }`}
+                        title="Under Maintenance (मर्मत)"
+                      >
+                        🔴 Mnt
+                      </button>
                     </div>
-                  </Link>
+
+                    <div className="mt-2 pt-1 border-t border-black/5 flex justify-end">
+                      <Link 
+                        href="/reservations" 
+                        className="text-[10px] text-blue-600 font-bold hover:underline flex items-center gap-1"
+                      >
+                        <span>View in Calendar</span> &rarr;
+                      </Link>
+                    </div>
+                  </div>
                 );
               })}
             </div>

@@ -642,8 +642,8 @@ model NightAuditRecord {
 model SystemConfig {
   id                     String   @id @default("default")
   businessTimezone       String   @default("Asia/Kathmandu")
-  vatRate                Float    @default(0.13)
-  serviceChargeRate      Float    @default(0.10)
+  vatRate                Float    @default(0.0)
+  serviceChargeRate      Float    @default(0.0)
   autoReleaseNoShowHour  Int      @default(18)
   holdDurationMinutes    Int      @default(15)
   maxJobRetries          Int      @default(5)

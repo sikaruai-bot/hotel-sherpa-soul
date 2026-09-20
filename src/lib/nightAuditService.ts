@@ -93,8 +93,8 @@ export async function executeNightAudit(options: NightAuditOptions = {}): Promis
           description: dateDesc,
           unitPrice: dailyRate,
           quantity: 1,
-          taxRate: 0.13, // 13% VAT
-          serviceChargeRate: 0.10, // 10% Service Charge
+          taxRate: 0, // 0% (Hotel registered in PAN only - Non-VAT)
+          serviceChargeRate: 0, // 0% (No service charge)
           source: 'NIGHT_AUDIT',
           createdBy: staff,
         });

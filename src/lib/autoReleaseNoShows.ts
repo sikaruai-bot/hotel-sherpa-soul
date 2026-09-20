@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
-import { ReservationStatus, RoomStatus } from '@prisma/client';
+import { ReservationStatus, RoomStatus, BookingSource } from '@prisma/client';
 import { emitPmsEvent } from '@/lib/events';
+import { releaseRoomInventory } from '@/lib/inventoryService';
 
 export interface AutoReleaseResult {
   success: boolean;
@@ -19,14 +20,13 @@ export interface AutoReleaseResult {
  * Automatically sweeps for reservations that have passed their check-in cut-off
  * without checking in (No-Shows).
  * 
- * Policy:
- * - Status must be CONFIRMED or PENDING (NOT CHECKED_IN, NOT CHECKED_OUT, NOT CANCELLED, NOT NO_SHOW)
- * - Check-in date is in the past, OR is today and the current Nepal time has passed the cut-off hour (default 18:00 / 6:00 PM)
- * - For each expired reservation:
- *   1. Updates Reservation status to NO_SHOW.
- *   2. Updates Room status to AVAILABLE and clears currentGuest.
- *   3. Creates an audit notification for hotel staff.
- *   4. Emits a PMS event for automations/webhooks.
+ * Safety Policies:
+ * - Status must be CONFIRMED or PENDING.
+ * - GRACE PERIOD: Never releases reservations created within the last 6 hours.
+ * - GUARANTEED: Never releases reservations with any paid amount (paidAmount > 0).
+ * - WALK-IN: Never releases WALK_IN reservations (guest is on premise).
+ * - Past-date: Strictly past check-in dates (< today) are released.
+ * - Same-day: Today's check-in is only released if booked prior to today and cut-off hour (18:00+) passed.
  */
 export async function autoReleaseExpiredNoShows(cutOffHour: number = 18): Promise<AutoReleaseResult> {
   try {
@@ -52,17 +52,39 @@ export async function autoReleaseExpiredNoShows(cutOffHour: number = 18): Promis
     const toRelease: typeof candidateReservations = [];
 
     for (const res of candidateReservations) {
+      // 1. Grace Period: Never auto-release reservations created in the last 6 hours
+      const resCreatedTime = new Date(res.createdAt).getTime();
+      if (now.getTime() - resCreatedTime < 6 * 60 * 60 * 1000) {
+        continue;
+      }
+
+      // 2. Guaranteed Booking: Never auto-release if any payment has been recorded
+      if (Number(res.paidAmount) > 0) {
+        continue;
+      }
+
+      // 3. Walk-In: Never auto-release walk-in bookings (guest is at the hotel)
+      if (res.source === BookingSource.WALK_IN) {
+        continue;
+      }
+
       const resCheckIn = new Date(res.checkInDate);
       const resCheckInNepal = new Date(resCheckIn.getTime() + nepalOffsetMs);
       const resCheckInDateStart = new Date(Date.UTC(resCheckInNepal.getUTCFullYear(), resCheckInNepal.getUTCMonth(), resCheckInNepal.getUTCDate(), 0, 0, 0));
 
-      // 1. If check-in date was before today (strictly past day), it is an expired no-show
+      // 4. Past Check-in Date: strictly before today
       if (resCheckInDateStart < nepalTodayStart) {
         toRelease.push(res);
       } 
-      // 2. If check-in date is today, and Nepal local time has exceeded the cut-off hour (e.g. 18:00 / 6 PM)
+      // 5. Today's Check-in Date: cut-off hour passed AND was booked before today (advance booking)
       else if (resCheckInDateStart.getTime() === nepalTodayStart.getTime() && nepalHours >= cutOffHour) {
-        toRelease.push(res);
+        const resCreatedNepal = new Date(resCreatedTime + nepalOffsetMs);
+        const resCreatedDateStart = new Date(Date.UTC(resCreatedNepal.getUTCFullYear(), resCreatedNepal.getUTCMonth(), resCreatedNepal.getUTCDate(), 0, 0, 0));
+
+        // Only release if booked on a prior date (advance reservation that didn't arrive by evening)
+        if (resCreatedDateStart < nepalTodayStart) {
+          toRelease.push(res);
+        }
       }
     }
 
@@ -97,6 +119,9 @@ export async function autoReleaseExpiredNoShows(cutOffHour: number = 18): Promis
           currentGuest: null,
         },
       });
+
+      // 2b. Release calendar & inventory lock so other guests can book immediately
+      await releaseRoomInventory(res.id);
 
       // 3. Create staff notification
       await prisma.notification.create({

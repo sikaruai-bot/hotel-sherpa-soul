@@ -31,12 +31,16 @@ import {
   Sparkles, 
   RotateCcw 
 } from 'lucide-react';
-import { usePms, Reservation, GuestIdType, PurposeOfVisitType } from '@/context/PmsContext';
+import { usePms, Reservation, GuestIdType, PurposeOfVisitType, Invoice } from '@/context/PmsContext';
 import SelfCheckinQrModal from '@/components/SelfCheckinQrModal';
 import LiveCameraCaptureModal from '@/components/LiveCameraCaptureModal';
+import PanInvoicePrint from '@/components/PanInvoicePrint';
 
 export default function FrontDeskPage() {
-  const { reservations, checkInGuest, checkOutGuest, createInvoice, releaseNoShow } = usePms();
+  const { reservations, checkInGuest, checkOutGuest, createInvoice, releaseNoShow, invoices } = usePms();
+
+  // Printable PAN Bill State
+  const [invoiceForPanPrint, setInvoiceForPanPrint] = useState<Invoice | null>(null);
 
   // Full Check-In Modal State
   const [selectedResForCheckIn, setSelectedResForCheckIn] = useState<Reservation | null>(null);
@@ -226,7 +230,7 @@ export default function FrontDeskPage() {
     const isFullyPaid = totalPaid >= grandTotal && grandTotal > 0;
     
     // Auto-create invoice with accurate paid amount and due status
-    createInvoice({
+    const created = createInvoice({
       reservationId: selectedResForCheckOut.id,
       invoiceDate: new Date().toISOString().split('T')[0],
       dueDate: new Date().toISOString().split('T')[0],
@@ -253,6 +257,7 @@ export default function FrontDeskPage() {
 
     setSelectedResForCheckOut(null);
     setCheckOutPayAmount(null);
+    setInvoiceForPanPrint(created);
   };
 
   return (
@@ -1158,19 +1163,51 @@ export default function FrontDeskPage() {
             </div>
 
             {/* Modal Actions */}
-            <div className="flex justify-between items-center pt-2">
+            <div className="flex flex-wrap justify-between items-center gap-2 pt-2">
               <button
                 onClick={() => setSelectedResForDetails(null)}
                 className="px-4 py-2 border rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
               >
                 Close
               </button>
-              <button
-                onClick={() => window.print()}
-                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5"
-              >
-                <Printer size={15} /> Print Registration Card (GRC)
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const existing = invoices.find(inv => inv.reservationId === selectedResForDetails.id);
+                    if (existing) {
+                      setInvoiceForPanPrint(existing);
+                    } else {
+                      const inv = createInvoice({
+                        reservationId: selectedResForDetails.id,
+                        invoiceDate: new Date().toISOString().split('T')[0],
+                        dueDate: new Date().toISOString().split('T')[0],
+                        guestName: selectedResForDetails.guestName,
+                        roomNumber: selectedResForDetails.roomNumber,
+                        items: [{ description: `Room Accommodation (${selectedResForDetails.roomType})`, quantity: 1, unitPrice: selectedResForDetails.totalAmount, total: selectedResForDetails.totalAmount }],
+                        subtotal: selectedResForDetails.totalAmount,
+                        taxAmount: 0,
+                        serviceCharge: 0,
+                        discount: 0,
+                        grandTotal: selectedResForDetails.totalAmount,
+                        paidAmount: selectedResForDetails.paidAmount,
+                        paymentMethod: 'Cash NPR',
+                        status: selectedResForDetails.paidAmount >= selectedResForDetails.totalAmount ? 'PAID' : (selectedResForDetails.paidAmount > 0 ? 'PARTIAL' : 'UNPAID'),
+                      });
+                      setInvoiceForPanPrint(inv);
+                    }
+                  }}
+                  className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5 transition"
+                >
+                  <FileText size={15} /> Print PAN Bill (प्यान बिजक)
+                </button>
+                <button
+                  onClick={() => window.print()}
+                  className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5 transition"
+                >
+                  <Printer size={15} /> Print Registration Card (GRC)
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1338,6 +1375,14 @@ export default function FrontDeskPage() {
         onCapture={(photoUrl) => setGuestPhotoUrl(photoUrl)}
         guestName={guestFullName || selectedResForCheckIn?.guestName || 'Guest'}
       />
+
+      {/* Official Printable PAN Bill Modal */}
+      {invoiceForPanPrint && (
+        <PanInvoicePrint
+          invoice={invoiceForPanPrint}
+          onClose={() => setInvoiceForPanPrint(null)}
+        />
+      )}
 
     </div>
   );

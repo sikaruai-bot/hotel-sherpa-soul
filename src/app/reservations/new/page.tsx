@@ -24,7 +24,8 @@ import {
   X,
   RotateCcw,
   Upload,
-  FileText
+  FileText,
+  Loader2
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePms, GuestIdType } from '@/context/PmsContext';
@@ -58,6 +59,7 @@ function NewReservationForm() {
 
   const [success, setSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // ID Document File Upload & Camera State
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -233,7 +235,7 @@ function NewReservationForm() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
 
@@ -252,39 +254,46 @@ function NewReservationForm() {
       return;
     }
 
-    const result = addReservation({
-      guestName: formData.guestName.trim(),
-      email: formData.email.trim(),
-      phone: formData.phone.trim(),
-      nationality: formData.nationality.trim(),
-      idType: formData.idType,
-      idNumber: formData.passportNumber.trim(),
-      passportNumber: formData.passportNumber.trim(),
-      idIssuedPlace: formData.idIssuedPlace.trim(),
-      address: formData.address.trim(),
-      photoUrl: formData.photoUrl || undefined,
-      roomNumber: formData.roomNumber,
-      roomType: selectedRoom ? selectedRoom.type : 'Standard Double',
-      checkInDate: formData.checkInDate,
-      checkOutDate: formData.checkOutDate,
-      adults: Number(formData.adults),
-      children: Number(formData.children),
-      totalAmount: Number(formData.totalAmount),
-      paidAmount: Number(formData.paidAmount),
-      status: Number(formData.paidAmount) > 0 ? 'CONFIRMED' : 'CONFIRMED',
-      source: formData.source,
-      specialRequests: formData.specialRequests.trim(),
-    });
+    setIsSubmitting(true);
+    try {
+      const result = await addReservation({
+        guestName: formData.guestName.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        nationality: formData.nationality.trim(),
+        idType: formData.idType,
+        idNumber: formData.passportNumber.trim(),
+        passportNumber: formData.passportNumber.trim(),
+        idIssuedPlace: formData.idIssuedPlace.trim(),
+        address: formData.address.trim(),
+        photoUrl: formData.photoUrl || undefined,
+        roomNumber: formData.roomNumber,
+        roomType: selectedRoom ? selectedRoom.type : 'Standard Double',
+        checkInDate: formData.checkInDate,
+        checkOutDate: formData.checkOutDate,
+        adults: Number(formData.adults),
+        children: Number(formData.children),
+        totalAmount: Number(formData.totalAmount),
+        paidAmount: Number(formData.paidAmount),
+        status: Number(formData.paidAmount) > 0 ? 'CONFIRMED' : 'CONFIRMED',
+        source: formData.source,
+        specialRequests: formData.specialRequests.trim(),
+      });
 
-    if (!result.success) {
-      setErrorMessage(result.error || 'Failed to create reservation.');
-      return;
+      if (!result.success) {
+        setErrorMessage(result.error || 'Failed to create reservation.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      setSuccess(true);
+      setTimeout(() => {
+        router.push('/reservations');
+      }, 1000);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'बुकिङ सुरक्षित गर्न सकिएन (Failed to save reservation).');
+      setIsSubmitting(false);
     }
-
-    setSuccess(true);
-    setTimeout(() => {
-      router.push('/reservations');
-    }, 1200);
   };
 
   return (
@@ -1006,14 +1015,21 @@ function NewReservationForm() {
           
           <button 
             type="submit" 
-            disabled={!currentAvailability.isAvailable}
+            disabled={!currentAvailability.isAvailable || isSubmitting}
             className={`w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-2.5 rounded-xl font-bold text-sm transition shadow-md ${
-              currentAvailability.isAvailable
+              isSubmitting
+                ? 'bg-purple-400 text-white cursor-wait'
+                : currentAvailability.isAvailable
                 ? 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer'
                 : 'bg-slate-300 text-slate-500 cursor-not-allowed border border-slate-300'
             }`}
           >
-            {currentAvailability.isAvailable ? (
+            {isSubmitting ? (
+              <>
+                <Loader2 size={18} className="animate-spin" />
+                सुरक्षित गरिँदैछ... (Saving to Database...)
+              </>
+            ) : currentAvailability.isAvailable ? (
               <>
                 <Save size={18} />
                 Confirm & Lock Reservation
