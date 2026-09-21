@@ -30,13 +30,25 @@ export async function GET(
 
     const { id } = await params;
 
+    const digits = id.replace(/[^0-9]/g, '');
+    const phoneConditions: any[] = [];
+    if (digits.length >= 6) {
+      phoneConditions.push({ guest: { phoneNumber: { contains: digits } } });
+      if (digits.length >= 9) {
+        phoneConditions.push({ guest: { phoneNumber: { contains: digits.slice(-9) } } });
+      }
+      if (digits.length >= 10) {
+        phoneConditions.push({ guest: { phoneNumber: { contains: digits.slice(-10) } } });
+      }
+    }
+
     const reservation = await prisma.reservation.findFirst({
       where: {
         OR: [
           { id },
           { reservationNumber: id.toUpperCase() },
           { externalBookingId: id },
-          { guest: { phoneNumber: { contains: id.replace(/[^0-9]/g, '') } } },
+          ...phoneConditions,
         ],
       },
       include: {
